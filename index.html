@@ -71,8 +71,9 @@
 
         #main-video {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             width: 100%;
             height: 100%;
             display: block;
@@ -539,6 +540,98 @@
             background-color: #333;
             transform: scale(0.95);
         }
+
+        /* --- ĐỘ PHÂN GIẢI TRÊN THANH PLAYER (Đỏ) --- */
+        #quality-setting-group {
+            display: none; /* Sẽ được đổi thành inline-flex bởi JS khi có dữ liệu */
+            align-items: center;
+            background: rgba(229, 9, 20, 0.15);
+            border: 2px solid var(--primary-red);
+            border-radius: 8px;
+            padding: 0 15px;
+            height: 58px;
+            box-sizing: border-box;
+            vertical-align: middle;
+        }
+
+        #quality-setting-group i {
+            color: var(--primary-red);
+            font-size: 20px;
+            margin-right: 8px;
+        }
+
+        #quality-select {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            outline: none;
+            cursor: pointer;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            font-family: inherit;
+        }
+
+        #quality-select option {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        /* --- CÁC BỘ CHỌN KHÁC TRÊN THANH PLAYER (Xám cao cấp) --- */
+        .player-control-group {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 0 15px;
+            height: 58px;
+            box-sizing: border-box;
+            vertical-align: middle;
+        }
+
+        .player-control-group i {
+            color: #ccc;
+            font-size: 20px;
+            margin-right: 8px;
+        }
+
+        .player-control-group select {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            outline: none;
+            cursor: pointer;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            font-family: inherit;
+        }
+
+        .player-control-group select option {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        /* --- THU GỌN NÚT PLAYER LINK --- */
+        #cast-toggle-btn {
+            font-size: 16px !important;
+            font-weight: bold;
+            padding: 0 18px;
+            height: 58px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        #cast-toggle-btn i {
+            font-size: 18px;
+        }
     </style>
 </head>
 <body>
@@ -581,18 +674,46 @@
             </div>
 
             <div class="controls-main">
-                <div style="display: flex; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 15px;">
                     <button class="btn focusable" id="play-pause-btn" tabindex="0"><i class="fas fa-pause"></i></button>
-                    <button class="btn focusable" id="mute-btn" tabindex="0" style="margin-left: 15px;"><i class="fas fa-volume-up"></i></button>
+                    <button class="btn focusable" id="mute-btn" tabindex="0"><i class="fas fa-volume-up"></i></button>
                     <!-- Nút Cast kết nối điện thoại trên TV -->
-                    <button class="btn focusable" id="cast-toggle-btn" tabindex="0" style="margin-left: 15px;" title="PLAYER LINK"><i class="fas fa-tv"></i> PLAYER LINK</button>
-                    <div class="time-display">
+                    <button class="btn focusable" id="cast-toggle-btn" tabindex="0" title="PLAYER LINK"><i class="fas fa-tv"></i> PLAYER LINK</button>
+                    <div class="time-display" style="margin-left: 5px;">
                         <span id="current-time">0:00</span> / <span id="duration-time">0:00</span>
                     </div>
                 </div>
-                <div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <!-- TỶ LỆ KHUNG HÌNH -->
+                    <div class="player-control-group" id="aspect-ratio-group">
+                        <i class="fas fa-crop-alt"></i>
+                        <select id="aspect-ratio-select" tabindex="0" class="focusable">
+                            <option value="16/9" selected>16:9</option>
+                            <option value="4/3">4:3</option>
+                            <option value="21/9">21:9</option>
+                            <option value="fill">Phóng to (Full)</option>
+                        </select>
+                    </div>
+
+                    <!-- TỐC ĐỘ PHÁT -->
+                    <div class="player-control-group" id="speed-group">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <select id="speed-select" tabindex="0" class="focusable">
+                            <option value="1" selected>1.0x</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="2">2.0x</option>
+                        </select>
+                    </div>
+
+                    <!-- ĐỘ PHÂN GIẢI (Đỏ - Trực quan trên thanh Player) -->
+                    <div id="quality-setting-group" style="display: none;">
+                        <i class="fas fa-video"></i>
+                        <select id="quality-select" tabindex="0" class="focusable">
+                            <option value="-1" selected>Tự động (Auto)</option>
+                        </select>
+                    </div>
                     <button class="btn focusable" id="settings-toggle" tabindex="0"><i class="fas fa-cog"></i></button>
-                    <button class="btn focusable" id="fullscreen-btn" tabindex="0" style="margin-left: 15px;"><i class="fas fa-expand"></i></button>
+                    <button class="btn focusable" id="fullscreen-btn" tabindex="0"><i class="fas fa-expand"></i></button>
                 </div>
             </div>
         </div>
@@ -601,29 +722,12 @@
         <div class="settings-modal-overlay" id="settings-modal-overlay">
             <div class="settings-modal">
                 <h3>Cài đặt Player</h3>
-                
-                <div class="setting-group">
-                    <label>TỶ LỆ KHUNG HÌNH</label>
-                    <select id="aspect-ratio-select" tabindex="0" class="focusable">
-                        <option value="16/9" selected>16:9 (Mặc định)</option>
-                        <option value="4/3">4:3 (Truyền thống)</option>
-                        <option value="21/9">21:9 (Điện ảnh)</option>
-                    </select>
-                </div>
 
                 <div class="setting-group">
-                    <label>TỐC ĐỘ PHÁT</label>
-                    <select id="speed-select" tabindex="0" class="focusable">
-                        <option value="1" selected>1.0x (Chuẩn)</option>
-                        <option value="1.5">1.5x</option>
-                        <option value="2">2.0x</option>
-                    </select>
-                </div>
-
-                <div class="setting-group" id="quality-setting-group" style="display: none;">
-                    <label>ĐỘ PHÂN GIẢI</label>
-                    <select id="quality-select" tabindex="0" class="focusable">
-                        <option value="-1" selected>Tự động (Auto)</option>
+                    <label>CORS PROXY (VƯỢT LỖI CORS)</label>
+                    <select id="cors-proxy-select" tabindex="0" class="focusable">
+                        <option value="off" selected>Tắt (Mặc định)</option>
+                        <option value="on">Bật (corsproxy.io)</option>
                     </select>
                 </div>
 
@@ -732,8 +836,8 @@
 <script>
     // Khởi tạo các kênh có sẵn
     const channels = [
-        { name: "VTV3 HD", logo: "https://xem360.net/image/vtv3.png", url: "https://live-a.fptplay53.net/live/media/vtv3/live247-hls-avc/vtv3-avc1_5600000=10000-mp4a_131600=20000.m3u8" },
-        { name: "VTV1 HD", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Logo_VTV1_2013.svg/1200px-Logo_VTV1_2013.svg.png", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+        { name: "VTV3 HD", logo: "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/logo/VTV3_150x902_1675158867.webp", url: "https://live-a.fptplay53.net/live/media/vtv3/live247-hls-avc/vtv3-avc1_5600000=10000-mp4a_131600=20000.m3u8" },
+        { name: "VTV1 HD", logo: "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/logo/VTV1_150x902_1675159127.webp", url: "https://live-a.fptplay53.net/live/media/vtv1/live247-hls-avc/vtv1-avc1_5600000=10000-mp4a_131600=20000.m3u8" },
         { name: "VTV2 HD", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Logo_VTV2_2013.svg/1200px-Logo_VTV2_2013.svg.png", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" }
     ];
 
@@ -857,10 +961,35 @@
         const subColorSelect = document.getElementById('sub-color-select');
         const subSizeSelect = document.getElementById('sub-size-select');
         const subBgSelect = document.getElementById('sub-bg-select');
+        const corsProxySelect = document.getElementById('cors-proxy-select');
 
         let hls;
         let dashPlayer;
         let currentVideoUrl = "";
+        
+        // Custom Loader class để tự động định tuyến toàn bộ request qua CORS proxy
+        class CorsProxyLoader {
+            constructor(config) {
+                if (Hls && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
+                    this.loader = new Hls.DefaultConfig.loader(config);
+                }
+            }
+            load(context, config, callbacks) {
+                if (context.url && !context.url.startsWith('https://corsproxy.io/')) {
+                    context.url = 'https://corsproxy.io/?' + context.url;
+                }
+                if (this.loader) {
+                    this.loader.load(context, config, callbacks);
+                }
+            }
+            abort() {
+                if (this.loader) this.loader.abort();
+            }
+            destroy() {
+                if (this.loader) this.loader.destroy();
+            }
+        }
+
         const hlsConfig = {
             maxBufferLength: 30,
             maxMaxBufferLength: 60,
@@ -1101,9 +1230,17 @@
                 drmKey = null;
             }
 
+            // Loại bỏ dấu gạch chéo kép (double slash) thừa sau host/port (ví dụ: http://ip:port//path thành http://ip:port/path)
+            if (url && typeof url === "string") {
+                url = url.replace(/(https?:\/\/.[^/]+)\/\/+/g, '$1/');
+            }
+
             currentVideoUrl = url;
             loadingIndicator.classList.add('active');
             
+            // Đọc cấu hình CORS proxy
+            const useProxy = localStorage.getItem('cors_proxy') === 'on';
+
             // Xóa phụ đề cũ nếu có
             const oldTracks = video.querySelectorAll('track');
             oldTracks.forEach(t => t.remove());
@@ -1141,6 +1278,22 @@
                     dashPlayer.reset();
                 }
                 
+                if (useProxy) {
+                    dashPlayer.extend("RequestModifier", function () {
+                        return {
+                            modifyRequestHeader: function (xhr) {
+                                return xhr;
+                            },
+                            modifyRequestURL: function (reqUrl) {
+                                if (reqUrl && !reqUrl.startsWith('https://corsproxy.io/')) {
+                                    return 'https://corsproxy.io/?' + reqUrl;
+                                }
+                                return reqUrl;
+                            }
+                        };
+                    }, true);
+                }
+                
                 // Cấu hình DRM ClearKey nếu được cung cấp trong URL hoặc cast parameters
                 const clearKeysObj = extractClearKey(url, drmKey);
                 if (clearKeysObj) {
@@ -1174,7 +1327,7 @@
                     hls = null;
                 }
                 updateQualityLevels();
-                video.src = url;
+                video.src = useProxy ? 'https://corsproxy.io/?' + url : url;
                 video.load(); 
                 const onPlay = () => {
                     video.play().catch(e => console.log("Auto-play blocked: ", e));
@@ -1192,7 +1345,13 @@
                 if (hls) {
                     hls.destroy();
                 }
-                hls = new Hls(hlsConfig);
+                
+                const currentHlsConfig = { ...hlsConfig };
+                if (useProxy && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
+                    currentHlsConfig.loader = CorsProxyLoader;
+                }
+
+                hls = new Hls(currentHlsConfig);
                 hls.loadSource(url);
                 hls.attachMedia(video);
                 
@@ -1228,7 +1387,7 @@
                     hls.destroy();
                     hls = null;
                 }
-                video.src = url;
+                video.src = useProxy ? 'https://corsproxy.io/?' + url : url;
                 video.load();
                 const onPlay = () => {
                     video.play().catch(e => console.log("Auto-play blocked: ", e));
@@ -1278,6 +1437,7 @@
             subBgSelect.value = bg;
 
             applySubtitleSettings(size, color, bg);
+            loadCorsProxySettings();
         }
 
         function applySubtitleSettings(size, color, bg) {
@@ -1299,12 +1459,49 @@
             applySubtitleSettings(subSizeSelect.value, subColorSelect.value, e.target.value);
         };
 
+        // 5.1 CẤU HÌNH CORS PROXY VÀ VƯỢT CƠ CHẾ CORS
+        function loadCorsProxySettings() {
+            const val = localStorage.getItem('cors_proxy') || 'off';
+            corsProxySelect.value = val;
+        }
+
+        corsProxySelect.onchange = (e) => {
+            localStorage.setItem('cors_proxy', e.target.value);
+            if (currentVideoUrl) {
+                // Tải lại luồng hiện tại để áp dụng proxy lập tức
+                const activeTracks = video.querySelectorAll('track');
+                const subUrl = activeTracks.length > 0 ? activeTracks[0].src : null;
+                loadAndPlay(currentVideoUrl, subUrl, null);
+            }
+        };
+
+        // Hàm định dạng tên chất lượng ngắn gọn, thẩm mỹ (Auto, 4K, 2K, 1080p, 720p, v.v.)
+        function getShortQualityName(height, fallbackName) {
+            if (height) {
+                if (height >= 2160) return "4K";
+                if (height >= 1440) return "2K";
+                return `${height}p`;
+            }
+            if (fallbackName) {
+                const match = fallbackName.match(/(\d{3,4})p?/i);
+                if (match) {
+                    const h = parseInt(match[1]);
+                    if (h >= 2160) return "4K";
+                    if (h >= 1440) return "2K";
+                    return `${h}p`;
+                }
+                if (fallbackName.toLowerCase().includes('auto')) return 'Auto';
+                return fallbackName;
+            }
+            return "Auto";
+        }
+
         // Cập nhật danh sách độ phân giải từ HLS Level hoặc DASH Bitrate
         function updateQualityLevels() {
             const qualityGroup = document.getElementById('quality-setting-group');
             const qualitySelect = document.getElementById('quality-select');
             
-            qualityGroup.style.display = 'block';
+            qualityGroup.style.display = 'inline-flex';
             
             // 1. Trường hợp đang phát MPEG-DASH (.mpd)
             if (currentVideoUrl.toLowerCase().includes('.mpd') && dashPlayer) {
@@ -1312,15 +1509,13 @@
                     const bitrates = dashPlayer.getBitrateInfoListFor('video');
                     if (!bitrates || bitrates.length === 0) {
                         const h = video.videoHeight;
-                        const displayText = h ? `${h}p (Chất lượng gốc)` : "Mặc định (Hệ thống)";
-                        qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
+                        qualitySelect.innerHTML = `<option value="-1" selected>${getShortQualityName(h, "Auto")}</option>`;
                         return;
                     }
                     
                     if (bitrates.length === 1) {
                         const h = bitrates[0].height || video.videoHeight;
-                        const displayText = h ? `${h}p (Chất lượng gốc)` : "Chất lượng gốc";
-                        qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
+                        qualitySelect.innerHTML = `<option value="-1" selected>${getShortQualityName(h, "Auto")}</option>`;
                         return;
                     }
                     
@@ -1329,9 +1524,9 @@
                     const isAuto = settings && settings.streaming && settings.streaming.abr && settings.streaming.abr.autoSwitchBitrate && settings.streaming.abr.autoSwitchBitrate.video;
                     const currentQuality = dashPlayer.getQualityFor('video');
                     
-                    qualitySelect.innerHTML = `<option value="-1" ${isAuto ? 'selected' : ''}>Tự động (Auto)</option>`;
+                    qualitySelect.innerHTML = `<option value="-1" ${isAuto ? 'selected' : ''}>Auto</option>`;
                     bitrates.forEach((info, index) => {
-                        const name = info.height ? `${info.height}p` : `${Math.round(info.bitrate / 1000)}kbps`;
+                        const name = getShortQualityName(info.height, info.height ? `${info.height}p` : `${Math.round(info.bitrate / 1000)}kbps`);
                         const option = document.createElement('option');
                         option.value = index;
                         option.textContent = name;
@@ -1342,7 +1537,7 @@
                     });
                 } catch (err) {
                     console.error("Lỗi đọc chất lượng DASH: ", err);
-                    qualitySelect.innerHTML = '<option value="-1" selected>Tự động (Auto)</option>';
+                    qualitySelect.innerHTML = '<option value="-1" selected>Auto</option>';
                 }
                 return;
             }
@@ -1352,14 +1547,13 @@
                 if (hls.levels.length === 1) {
                     const level = hls.levels[0];
                     const h = level.height || video.videoHeight;
-                    const displayText = h ? `${h}p (Chất lượng gốc)` : "Chất lượng gốc";
-                    qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
+                    qualitySelect.innerHTML = `<option value="-1" selected>${getShortQualityName(h, "Auto")}</option>`;
                     return;
                 }
                 
-                qualitySelect.innerHTML = '<option value="-1">Tự động (Auto)</option>';
+                qualitySelect.innerHTML = '<option value="-1">Auto</option>';
                 hls.levels.forEach((level, index) => {
-                    const name = level.name || (level.height ? `${level.height}p` : `Luồng ${index + 1}`);
+                    const name = getShortQualityName(level.height, level.name || `Luồng ${index + 1}`);
                     const option = document.createElement('option');
                     option.value = index;
                     option.textContent = name;
@@ -1371,8 +1565,7 @@
 
             // 3. Trường hợp phát trực tiếp không qua thư viện hoặc file MP4
             const h = video.videoHeight;
-            const displayText = h ? `${h}p (Chất lượng gốc)` : "Mặc định (Hệ thống)";
-            qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
+            qualitySelect.innerHTML = `<option value="-1" selected>${getShortQualityName(h, "Auto")}</option>`;
         }
 
         // Đăng ký sự kiện thay đổi độ phân giải thủ công
@@ -1434,7 +1627,7 @@
 
         document.getElementById('settings-toggle').onclick = () => {
             modal.classList.add('active');
-            document.getElementById('aspect-ratio-select').focus();
+            document.getElementById('cors-proxy-select').focus();
         };
         
         document.getElementById('close-modal-btn').onclick = () => {
@@ -1455,7 +1648,17 @@
         };
 
         document.getElementById('aspect-ratio-select').onchange = (e) => {
-            wrapper.style.aspectRatio = e.target.value;
+            const val = e.target.value;
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'contain';
+
+            if (val === '16/9' || val === '4/3' || val === '21/9') {
+                wrapper.style.aspectRatio = val;
+            } else if (val === 'fill') {
+                wrapper.style.aspectRatio = '16/9';
+                video.style.objectFit = 'fill';
+            }
         };
         
         document.getElementById('speed-select').onchange = (e) => {
@@ -1791,6 +1994,10 @@
                 return;
             }
         });
+
+        // Tự động hiện/ẩn thanh điều khiển khi tương tác chuột/pointer
+        wrapper.addEventListener('mousemove', resetTVIdleTimer);
+        wrapper.addEventListener('click', resetTVIdleTimer);
 
         // Khởi chạy hệ thống trên Tivi
         registerTVKeys();
