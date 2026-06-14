@@ -66,24 +66,6 @@
             background-color: #000;
             border-radius: 12px;
             overflow: hidden;
-            border: 4px solid transparent;
-            /* Chỉ transition các thuộc tính được GPU tăng tốc */
-            transition: border-color 0.2s, transform 0.2s, aspect-ratio 0.4s;
-        }
-
-        .player-wrapper:focus {
-            border-color: var(--focus-color);
-            outline: none !important;
-            transform: scale(1.02);
-        }
-
-        /* Ẩn viền vàng, outline và hiệu ứng phóng to khi toàn màn hình */
-        .player-wrapper:fullscreen,
-        .player-wrapper:-webkit-full-screen {
-            border: none !important;
-            outline: none !important;
-            transform: none !important;
-            border-radius: 0 !important;
         }
 
         #main-video {
@@ -586,7 +568,7 @@
 
 <!-- CHẾ ĐỘ PHÁT TRÊN TV (PLAYER MODE) -->
 <div class="main-app" id="app-player">
-    <div class="player-wrapper" id="player-wrapper" tabindex="0" title="Nhấn OK để toàn màn hình">
+    <div class="player-wrapper" id="player-wrapper" title="Nhấn OK để toàn màn hình">
         <video id="main-video" crossorigin="anonymous"></video>
         <div class="loading-indicator" id="loading-indicator">
             <i class="fas fa-spinner fa-spin"></i> Đang tải luồng...
@@ -1071,7 +1053,7 @@
                     hls.destroy();
                     hls = null;
                 }
-                document.getElementById('quality-setting-group').style.display = 'none';
+                updateQualityLevels();
                 video.src = url;
                 video.load(); 
                 const onPlay = () => {
@@ -1181,26 +1163,36 @@
             const qualityGroup = document.getElementById('quality-setting-group');
             const qualitySelect = document.getElementById('quality-select');
             
-            if (!hls || !hls.levels || hls.levels.length <= 1) {
-                qualityGroup.style.display = 'none';
+            qualityGroup.style.display = 'block';
+            
+            // Trường hợp phát trực tiếp không qua Hls.js hoặc link MP4 đơn lẻ
+            if (!hls || !hls.levels || hls.levels.length === 0) {
+                const h = video.videoHeight;
+                const displayText = h ? `${h}p (Chất lượng gốc)` : "Mặc định (Hệ thống)";
+                qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
                 return;
             }
             
-            qualityGroup.style.display = 'block';
+            // Trường hợp file HLS chỉ có đúng 1 độ phân giải
+            if (hls.levels.length === 1) {
+                const level = hls.levels[0];
+                const h = level.height || video.videoHeight;
+                const displayText = h ? `${h}p (Chất lượng gốc)` : "Chất lượng gốc";
+                qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
+                return;
+            }
             
-            // Xóa các lựa chọn cũ
-            qualitySelect.innerHTML = '<option value="-1" selected>Tự động (Auto)</option>';
+            // Trường hợp luồng có nhiều chất lượng (Multi-bitrate)
+            qualitySelect.innerHTML = '<option value="-1">Tự động (Auto)</option>';
             
-            // Điền các mức chất lượng
             hls.levels.forEach((level, index) => {
-                const name = level.name || (level.height ? `${level.height}p` : `${Math.round(level.bitrate / 1000)}kbps`);
+                const name = level.name || (level.height ? `${level.height}p` : `Luồng ${index + 1}`);
                 const option = document.createElement('option');
                 option.value = index;
                 option.textContent = name;
                 qualitySelect.appendChild(option);
             });
 
-            // Set giá trị hiện tại
             qualitySelect.value = hls.currentLevel;
         }
 
@@ -1218,6 +1210,7 @@
 
         video.addEventListener('play', () => { updatePlayIcon(false); });
         video.addEventListener('pause', () => { updatePlayIcon(true); });
+        video.addEventListener('loadedmetadata', updateQualityLevels);
 
         video.addEventListener('timeupdate', () => {
             if (video.duration) {
