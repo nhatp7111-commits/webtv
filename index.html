@@ -14,6 +14,10 @@
             --text-main: #ffffff;
             --modal-bg: #1e1e1e;
             --primary-red: #e50914;
+            /* Cài đặt biến phụ đề mặc định */
+            --sub-color: #ffffff;
+            --sub-size: 32px;
+            --sub-bg: rgba(0, 0, 0, 0.8);
         }
 
         * {
@@ -81,6 +85,19 @@
             display: block;
             object-fit: contain; /* Giữ tỷ lệ chuẩn, tránh móp méo hình */
             z-index: 1;
+        }
+
+        /* --- CUSTOM STYLE CHO CUE PHỤ ĐỀ (NATIVE TRÊN TV) --- */
+        video::cue {
+            color: var(--sub-color) !important;
+            font-size: var(--sub-size) !important;
+            background-color: var(--sub-bg) !important;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9),
+                         -1px -1px 0 rgba(0,0,0,0.8),
+                         1px -1px 0 rgba(0,0,0,0.8),
+                         -1px 1px 0 rgba(0,0,0,0.8),
+                         1px 1px 0 rgba(0,0,0,0.8) !important;
         }
 
         /* --- THANH ĐIỀU KHIỂN --- */
@@ -175,32 +192,34 @@
         .settings-modal {
             background: var(--modal-bg);
             width: 500px;
-            padding: 40px;
+            padding: 30px;
             border-radius: 16px;
             box-shadow: 0 15px 50px rgba(0,0,0,0.8);
             border: 1px solid #333;
+            max-height: 90%;
+            overflow-y: auto;
         }
         .settings-modal h3 {
-            font-size: 28px;
+            font-size: 26px;
             margin-top: 0;
             border-bottom: 2px solid #444;
-            padding-bottom: 15px;
+            padding-bottom: 12px;
         }
 
         .setting-group {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         .setting-group label {
-            font-size: 18px;
+            font-size: 16px;
             color: #aaa;
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-weight: bold;
         }
         .setting-group select {
             width: 100%;
-            font-size: 20px;
-            padding: 15px;
+            font-size: 18px;
+            padding: 12px;
             background: #111;
             color: #fff;
             border: 2px solid #444;
@@ -310,6 +329,27 @@
         }
         .loading-indicator.active {
             display: block;
+        }
+
+        /* --- STYLE CHO BÀN PHÍM PIN --- */
+        .pin-btn {
+            background: #2b2b2b;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            border: none;
+            height: 60px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pin-btn:focus {
+            background-color: var(--focus-color) !important;
+            color: #000 !important;
+            transform: scale(1.1);
         }
 
         /* ==========================================
@@ -510,6 +550,30 @@
 </head>
 <body>
 
+<!-- MÀN HÌNH KHÓA PIN TV (PIN OVERLAY) -->
+<div id="pin-overlay" style="position: fixed; inset: 0; background: #0f0f0f; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <h2 style="color: var(--primary-red); font-size: 32px; margin-bottom: 20px;"><i class="fas fa-lock"></i> MÃ PIN BẢO MẬT</h2>
+    <p style="color: #aaa; font-size: 18px; margin-bottom: 30px;">Vui lòng nhập mã PIN để truy cập hệ thống</p>
+    
+    <input type="password" id="pin-input" readonly style="width: 250px; height: 60px; font-size: 32px; text-align: center; background: #1e1e1e; border: 2px solid #444; color: white; border-radius: 8px; letter-spacing: 10px; margin-bottom: 30px; outline: none;">
+    
+    <div style="display: grid; grid-template-columns: repeat(3, 80px); gap: 15px; margin-bottom: 20px;">
+        <button class="pin-btn focusable" tabindex="0">1</button>
+        <button class="pin-btn focusable" tabindex="0">2</button>
+        <button class="pin-btn focusable" tabindex="0">3</button>
+        <button class="pin-btn focusable" tabindex="0">4</button>
+        <button class="pin-btn focusable" tabindex="0">5</button>
+        <button class="pin-btn focusable" tabindex="0">6</button>
+        <button class="pin-btn focusable" tabindex="0">7</button>
+        <button class="pin-btn focusable" tabindex="0">8</button>
+        <button class="pin-btn focusable" tabindex="0">9</button>
+        <button class="pin-btn focusable" tabindex="0" style="background:#e74c3c; color: white;" id="pin-clear">C</button>
+        <button class="pin-btn focusable" tabindex="0">0</button>
+        <button class="pin-btn focusable" tabindex="0" style="background:#2ecc71; color: white;" id="pin-ok">OK</button>
+    </div>
+    <div id="pin-error" style="color: #e74c3c; font-size: 18px; height: 20px; font-weight: bold;"></div>
+</div>
+
 <!-- CHẾ ĐỘ PHÁT TRÊN TV (PLAYER MODE) -->
 <div class="main-app" id="app-player">
     <div class="player-wrapper" id="player-wrapper" tabindex="0" title="Nhấn OK để toàn màn hình">
@@ -540,7 +604,7 @@
             </div>
         </div>
 
-        <!-- Modal Cài đặt Player -->
+        <!-- Modal Cài đặt Player & Phụ đề -->
         <div class="settings-modal-overlay" id="settings-modal-overlay">
             <div class="settings-modal">
                 <h3>Cài đặt Player</h3>
@@ -563,7 +627,37 @@
                     </select>
                 </div>
 
-                <button class="btn focusable" id="close-modal-btn" tabindex="0" style="width: 100%; background: #444; margin-top: 10px;">ĐÓNG</button>
+                <h3 style="margin-top: 25px; font-size: 22px; border-bottom: 2px solid #444; padding-bottom: 8px;">Cài đặt Phụ đề</h3>
+
+                <div class="setting-group">
+                    <label>MÀU SẮC PHỤ ĐỀ</label>
+                    <select id="sub-color-select" tabindex="0" class="focusable">
+                        <option value="#ffffff" selected>Trắng</option>
+                        <option value="#ffeb3b">Vàng</option>
+                        <option value="#00e5ff">Xanh lam</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label>KÍCH THƯỚC PHỤ ĐỀ</label>
+                    <select id="sub-size-select" tabindex="0" class="focusable">
+                        <option value="24px">Nhỏ</option>
+                        <option value="32px" selected>Vừa (Chuẩn)</option>
+                        <option value="40px">Lớn</option>
+                        <option value="48px">Rất lớn</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label>NỀN PHỤ ĐỀ</label>
+                    <select id="sub-bg-select" tabindex="0" class="focusable">
+                        <option value="rgba(0, 0, 0, 0.8)" selected>Đen đậm</option>
+                        <option value="rgba(0, 0, 0, 0.4)">Mờ</option>
+                        <option value="transparent">Không nền</option>
+                    </select>
+                </div>
+
+                <button class="btn focusable" id="close-modal-btn" tabindex="0" style="width: 100%; background: #444; margin-top: 15px;">ĐÓNG</button>
             </div>
         </div>
 
@@ -605,6 +699,9 @@
         <div class="remote-status" id="remote-room-title">Đang kết nối...</div>
         
         <input type="text" class="remote-input" id="remote-input-url" placeholder="Dán link video (.m3u8, .mp4, ...)">
+        <!-- Input phụ đề di động -->
+        <input type="text" class="remote-input" id="remote-input-sub" placeholder="Dán link phụ đề (.vtt, .srt) (Tùy chọn)" style="margin-top: 10px;">
+        
         <button class="remote-btn-cast" id="remote-btn-cast">
             <i class="fas fa-paper-plane"></i> 🚀 BẮN LÊN TV
         </button>
@@ -642,6 +739,7 @@
 
     // Trình chủ ntfy.sh (Public Free Broker)
     const NTFY_SERVER = "https://ntfy.sh/";
+    const APP_PIN = "1234"; // MÃ PIN BẢO MẬT MẶC ĐỊNH
 
     // Phân tích chế độ từ URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -649,7 +747,25 @@
     let roomID = urlParams.get('room');
 
     if (mode === 'remote' && roomID) {
-        initRemoteMode();
+        // KIỂM TRA PIN TRÊN ĐIỆN THOẠI TRƯỚC
+        let savedPin = localStorage.getItem('app_pin');
+        while (savedPin !== APP_PIN) {
+            const entered = prompt("Vui lòng nhập mã PIN bảo mật:");
+            if (entered === null) {
+                document.body.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>Không có quyền truy cập.</h2>";
+                window.stop();
+                break;
+            }
+            if (entered === APP_PIN) {
+                localStorage.setItem('app_pin', entered);
+                savedPin = entered;
+            } else {
+                alert("Sai mã PIN!");
+            }
+        }
+        if (savedPin === APP_PIN) {
+            initRemoteMode();
+        }
     } else {
         initPlayerMode();
     }
@@ -658,11 +774,13 @@
     // CHẾ ĐỘ 1: BỘ ĐIỀU KHIỂN TRÊN ĐIỆN THOẠI (REMOTE)
     // ==========================================
     function initRemoteMode() {
+        document.getElementById('pin-overlay').style.display = 'none';
         document.getElementById('app-player').style.display = 'none';
         document.getElementById('app-remote').style.display = 'flex';
         document.getElementById('remote-room-title').innerText = `Phòng: ${roomID}`;
 
         const inputUrl = document.getElementById('remote-input-url');
+        const inputSub = document.getElementById('remote-input-sub');
         const btnCast = document.getElementById('remote-btn-cast');
 
         // Gửi lệnh sang tivi qua API POST của ntfy.sh
@@ -675,10 +793,14 @@
 
         btnCast.onclick = () => {
             const url = inputUrl.value.trim();
+            const sub = inputSub.value.trim();
             if (url) {
-                sendSignal(url);
+                // Định dạng gói tin cast: link_video|link_phu_de
+                const msg = sub ? `${url}|${sub}` : url;
+                sendSignal(msg);
                 inputUrl.value = "";
-                alert("Đã bắn link lên TV!");
+                inputSub.value = "";
+                alert("Đã bắn link kèm phụ đề lên TV!");
             }
         };
 
@@ -714,13 +836,27 @@
         const video = document.getElementById('main-video');
         const wrapper = document.getElementById('player-wrapper');
         const controlsOverlay = document.getElementById('controls-overlay');
+        
+        // Modals
         const modal = document.getElementById('settings-modal-overlay');
         const castModal = document.getElementById('cast-modal-overlay');
+        const pinOverlay = document.getElementById('pin-overlay');
+        
         const loadingIndicator = document.getElementById('loading-indicator');
         
         const castToggleBtn = document.getElementById('cast-toggle-btn');
         const closeCastBtn = document.getElementById('close-cast-btn');
         const castQrImage = document.getElementById('cast-qr-image');
+
+        // Mật khẩu PIN và dữ liệu nhập
+        const pinInput = document.getElementById('pin-input');
+        const pinError = document.getElementById('pin-error');
+        let currentPinText = "";
+
+        // Elements cấu hình phụ đề
+        const subColorSelect = document.getElementById('sub-color-select');
+        const subSizeSelect = document.getElementById('sub-size-select');
+        const subBgSelect = document.getElementById('sub-bg-select');
 
         let hls;
         const hlsConfig = {
@@ -731,7 +867,49 @@
             enableWorker: true
         };
 
-        // Tự động sinh ID phòng ngẫu nhiên và lưu lại
+        // 1. KIỂM TRA PIN BẢO MẬT TRÊN TIVI
+        function checkPinAuthentication() {
+            const savedPin = localStorage.getItem('app_pin');
+            if (savedPin === APP_PIN) {
+                pinOverlay.style.display = 'none';
+                document.getElementById('play-pause-btn').focus();
+            } else {
+                pinOverlay.style.display = 'flex';
+                setTimeout(() => {
+                    const firstBtn = document.querySelector('.pin-btn');
+                    if (firstBtn) firstBtn.focus();
+                }, 100);
+            }
+        }
+
+        // Đăng ký các nút PIN ảo
+        document.querySelectorAll('.pin-btn').forEach(btn => {
+            btn.onclick = () => {
+                const val = btn.innerText;
+                if (val === 'C') {
+                    currentPinText = "";
+                    pinInput.value = "";
+                    pinError.innerText = "";
+                } else if (val === 'OK') {
+                    if (currentPinText === APP_PIN) {
+                        localStorage.setItem('app_pin', currentPinText);
+                        pinOverlay.style.display = 'none';
+                        document.getElementById('play-pause-btn').focus();
+                    } else {
+                        pinError.innerText = "Sai mã PIN!";
+                        currentPinText = "";
+                        pinInput.value = "";
+                    }
+                } else {
+                    if (currentPinText.length < 8) {
+                        currentPinText += val;
+                        pinInput.value = "*".repeat(currentPinText.length);
+                    }
+                }
+            };
+        });
+
+        // 2. KHỞI TẠO ROOM ID VÀ MẠNG TÍN HIỆU
         if (!roomID) {
             roomID = localStorage.getItem('tv_room_id');
             if (!roomID) {
@@ -750,7 +928,11 @@
                 if (data.event === "message" && data.message) {
                     const msg = data.message.trim();
                     if (msg.startsWith('http://') || msg.startsWith('https://')) {
-                        loadAndPlay(msg);
+                        // Tách link video và phụ đề bằng ký tự '|'
+                        const parts = msg.split('|');
+                        const videoUrl = parts[0];
+                        const subUrl = parts.length > 1 ? parts[1] : null;
+                        loadAndPlay(videoUrl, subUrl);
                         castModal.classList.remove('active');
                     } else if (msg.startsWith('cmd:')) {
                         const cmd = msg.split(':')[1];
@@ -808,7 +990,7 @@
             }
         }
 
-        // Tạo giao diện kênh TV trên màn hình
+        // 3. RENDER KÊNH & LINK SERVER
         const channelGrid = document.getElementById('channel-grid');
         channels.forEach(ch => {
             const card = document.createElement('div');
@@ -839,9 +1021,33 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        // Logic phát luồng Native-First HLS
-        function loadAndPlay(url) {
+        // 4. PHÂN TÍCH VÀ PHÁT VIDEO KÈM PHỤ ĐỀ
+        function loadAndPlay(url, subUrl) {
             loadingIndicator.classList.add('active');
+            
+            // Xóa phụ đề cũ nếu có
+            const oldTracks = video.querySelectorAll('track');
+            oldTracks.forEach(t => t.remove());
+
+            // Tải và xử lý phụ đề rời
+            if (subUrl) {
+                if (subUrl.toLowerCase().endsWith('.srt')) {
+                    fetch(subUrl)
+                        .then(res => res.text())
+                        .then(srtText => {
+                            const vttText = convertSrtToVtt(srtText);
+                            const blob = new Blob([vttText], { type: 'text/vtt' });
+                            const blobUrl = URL.createObjectURL(blob);
+                            addSubtitleTrack(blobUrl);
+                        })
+                        .catch(err => {
+                            console.error("Lỗi chuyển đổi SRT: ", err);
+                            addSubtitleTrack(subUrl); // Thử load trực tiếp
+                        });
+                } else {
+                    addSubtitleTrack(subUrl);
+                }
+            }
             
             if (video.canPlayType('application/vnd.apple.mpegurl') || video.canPlayType('application/x-mpegURL')) {
                 if (hls) {
@@ -892,6 +1098,66 @@
             }
         }
 
+        // Chuyển đổi SRT sang WebVTT (dùng dấu chấm thay dấu phẩy)
+        function convertSrtToVtt(srtText) {
+            let vtt = srtText.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+            if (!vtt.startsWith('WEBVTT')) {
+                vtt = 'WEBVTT\n\n' + vtt;
+            }
+            return vtt;
+        }
+
+        // Gắn phụ đề vào thẻ video
+        function addSubtitleTrack(src) {
+            const track = document.createElement('track');
+            track.kind = 'subtitles';
+            track.label = 'Tiếng Việt';
+            track.srclang = 'vi';
+            track.src = src;
+            track.default = true;
+            video.appendChild(track);
+            
+            // Kích hoạt hiển thị phụ đề sau khi gắn
+            setTimeout(() => {
+                if (video.textTracks && video.textTracks[0]) {
+                    video.textTracks[0].mode = 'showing';
+                }
+            }, 500);
+        }
+
+        // 5. CẤU HÌNH & LƯU TRỮ TINH CHỈNH PHỤ ĐỀ
+        function loadSubtitleSettings() {
+            const size = localStorage.getItem('sub_size') || '32px';
+            const color = localStorage.getItem('sub_color') || '#ffffff';
+            const bg = localStorage.getItem('sub_bg') || 'rgba(0, 0, 0, 0.8)';
+
+            subSizeSelect.value = size;
+            subColorSelect.value = color;
+            subBgSelect.value = bg;
+
+            applySubtitleSettings(size, color, bg);
+        }
+
+        function applySubtitleSettings(size, color, bg) {
+            document.documentElement.style.setProperty('--sub-size', size);
+            document.documentElement.style.setProperty('--sub-color', color);
+            document.documentElement.style.setProperty('--sub-bg', bg);
+        }
+
+        subColorSelect.onchange = (e) => {
+            localStorage.setItem('sub_color', e.target.value);
+            applySubtitleSettings(subSizeSelect.value, e.target.value, subBgSelect.value);
+        };
+        subSizeSelect.onchange = (e) => {
+            localStorage.setItem('sub_size', e.target.value);
+            applySubtitleSettings(e.target.value, subColorSelect.value, subBgSelect.value);
+        };
+        subBgSelect.onchange = (e) => {
+            localStorage.setItem('sub_bg', e.target.value);
+            applySubtitleSettings(subSizeSelect.value, subColorSelect.value, e.target.value);
+        };
+
+        // 6. XỬ LÝ PHÍM & GIAO DIỆN TIVI
         function updatePlayIcon(isPaused) {
             document.getElementById('play-pause-btn').innerHTML = isPaused ? '<i class="fas fa-play"></i>' : '<i class="fas fa-pause"></i>';
         }
@@ -914,7 +1180,6 @@
             return m + ":" + (sec < 10 ? "0" + sec : sec);
         }
 
-        // Tác vụ nút điều khiển trên tivi
         document.getElementById('play-pause-btn').onclick = () => video.paused ? video.play() : video.pause();
         
         document.getElementById('mute-btn').onclick = () => {
@@ -939,7 +1204,6 @@
             document.getElementById('settings-toggle').focus();
         };
 
-        // Gắn sự kiện cho Modal Cast
         const remoteURL = `${window.location.origin}${window.location.pathname}?mode=remote&room=${roomID}`;
         castToggleBtn.onclick = () => {
             castQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(remoteURL)}`;
@@ -1023,6 +1287,14 @@
         }
 
         function getFocusableElements() {
+            // Khi màn hình khóa PIN đang hiện, giới hạn chỉ cho focus các nút số
+            if (pinOverlay.style.display !== 'none') {
+                return Array.from(pinOverlay.querySelectorAll('.focusable')).filter(el => {
+                    const style = window.getComputedStyle(el);
+                    return style.display !== 'none' && style.visibility !== 'hidden';
+                });
+            }
+
             if (modal.classList.contains('active')) {
                 return Array.from(modal.querySelectorAll('.focusable')).filter(el => {
                     const style = window.getComputedStyle(el);
@@ -1045,9 +1317,7 @@
             });
         }
 
-        // ==========================================
-        // XỬ LÝ PHÍM BẤM TV & IDLE TIMER
-        // ==========================================
+        // IDLE TIMER ẨN PHÍM ĐIỀU KHIỂN
         let idleTimer;
         let isSeeking = false;
 
@@ -1075,9 +1345,48 @@
         };
 
         document.addEventListener('keydown', (e) => {
-            resetTVIdleTimer();
             const keyCode = e.keyCode || e.which;
             const activeElement = document.activeElement;
+
+            // Xử lý phím cho PIN Overlay
+            if (pinOverlay.style.display !== 'none') {
+                resetTVIdleTimer();
+                if (keyCode >= 48 && keyCode <= 57) { // Phím số 0-9 vật lý
+                    const num = keyCode - 48;
+                    if (currentPinText.length < 8) {
+                        currentPinText += num;
+                        pinInput.value = "*".repeat(currentPinText.length);
+                    }
+                    return;
+                }
+                if (keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE) {
+                    e.preventDefault();
+                    currentPinText = "";
+                    pinInput.value = "";
+                    pinError.innerText = "";
+                    return;
+                }
+                if (keyCode === KEY_CODES.ENTER) {
+                    e.preventDefault();
+                    if (activeElement && activeElement.classList.contains('pin-btn')) {
+                        activeElement.click();
+                    }
+                    return;
+                }
+                if (keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT || 
+                    keyCode === KEY_CODES.UP || keyCode === KEY_CODES.DOWN) {
+                    e.preventDefault();
+                    const direction = keyCode === KEY_CODES.LEFT ? 'left' :
+                                      keyCode === KEY_CODES.RIGHT ? 'right' :
+                                      keyCode === KEY_CODES.UP ? 'up' : 'down';
+                    const nextElement = findNearestElement(activeElement, direction);
+                    if (nextElement) nextElement.focus();
+                    return;
+                }
+                return; // Ngăn chặn các phím khác khi chưa mở khóa
+            }
+
+            resetTVIdleTimer();
 
             // Xử lý phím trong Settings Modal
             if (modal.classList.contains('active')) {
@@ -1245,14 +1554,12 @@
             }
         });
 
-        // Khởi động
+        // Khởi chạy hệ thống trên Tivi
         registerTVKeys();
+        loadSubtitleSettings();
+        checkPinAuthentication();
         loadAndPlay(channels[0].url);
-
-        window.onload = () => {
-            document.getElementById('play-pause-btn').focus();
-            resetTVIdleTimer();
-        };
+        resetTVIdleTimer();
     }
 </script>
 </body>
