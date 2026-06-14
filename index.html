@@ -73,7 +73,17 @@
 
         .player-wrapper:focus {
             border-color: var(--focus-color);
+            outline: none !important;
             transform: scale(1.02);
+        }
+
+        /* Ẩn viền vàng, outline và hiệu ứng phóng to khi toàn màn hình */
+        .player-wrapper:fullscreen,
+        .player-wrapper:-webkit-full-screen {
+            border: none !important;
+            outline: none !important;
+            transform: none !important;
+            border-radius: 0 !important;
         }
 
         #main-video {
@@ -627,6 +637,13 @@
                     </select>
                 </div>
 
+                <div class="setting-group" id="quality-setting-group" style="display: none;">
+                    <label>ĐỘ PHÂN GIẢI</label>
+                    <select id="quality-select" tabindex="0" class="focusable">
+                        <option value="-1" selected>Tự động (Auto)</option>
+                    </select>
+                </div>
+
                 <h3 style="margin-top: 25px; font-size: 22px; border-bottom: 2px solid #444; padding-bottom: 8px;">Cài đặt Phụ đề</h3>
 
                 <div class="setting-group">
@@ -1054,6 +1071,7 @@
                     hls.destroy();
                     hls = null;
                 }
+                document.getElementById('quality-setting-group').style.display = 'none';
                 video.src = url;
                 video.load(); 
                 const onPlay = () => {
@@ -1074,6 +1092,7 @@
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     video.play().catch(e => console.log("Auto-play blocked: ", e));
                     loadingIndicator.classList.remove('active');
+                    updateQualityLevels();
                 });
 
                 hls.on(Hls.Events.ERROR, function (event, data) {
@@ -1155,6 +1174,41 @@
         subBgSelect.onchange = (e) => {
             localStorage.setItem('sub_bg', e.target.value);
             applySubtitleSettings(subSizeSelect.value, subColorSelect.value, e.target.value);
+        };
+
+        // Cập nhật danh sách độ phân giải từ HLS Level
+        function updateQualityLevels() {
+            const qualityGroup = document.getElementById('quality-setting-group');
+            const qualitySelect = document.getElementById('quality-select');
+            
+            if (!hls || !hls.levels || hls.levels.length <= 1) {
+                qualityGroup.style.display = 'none';
+                return;
+            }
+            
+            qualityGroup.style.display = 'block';
+            
+            // Xóa các lựa chọn cũ
+            qualitySelect.innerHTML = '<option value="-1" selected>Tự động (Auto)</option>';
+            
+            // Điền các mức chất lượng
+            hls.levels.forEach((level, index) => {
+                const name = level.name || (level.height ? `${level.height}p` : `${Math.round(level.bitrate / 1000)}kbps`);
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = name;
+                qualitySelect.appendChild(option);
+            });
+
+            // Set giá trị hiện tại
+            qualitySelect.value = hls.currentLevel;
+        }
+
+        // Đăng ký sự kiện thay đổi độ phân giải thủ công
+        document.getElementById('quality-select').onchange = (e) => {
+            if (hls) {
+                hls.currentLevel = parseInt(e.target.value);
+            }
         };
 
         // 6. XỬ LÝ PHÍM & GIAO DIỆN TIVI
