@@ -930,11 +930,23 @@
                 if (data.event === "message" && data.message) {
                     const msg = data.message.trim();
                     if (msg.startsWith('http://') || msg.startsWith('https://')) {
-                        // Tách link video và phụ đề bằng ký tự '|'
-                        const parts = msg.split('|');
+                        // Tách link video, phụ đề và khóa DRM bằng ký tự '|'
+                        const parts = msg.split('|').map(p => p.trim());
                         const videoUrl = parts[0];
-                        const subUrl = parts.length > 1 ? parts[1] : null;
-                        loadAndPlay(videoUrl, subUrl);
+                        let subUrl = null;
+                        let drmKey = null;
+                        
+                        for (let i = 1; i < parts.length; i++) {
+                            const part = parts[i];
+                            if (!part || part === "null" || part === "undefined") continue;
+                            if (part.includes(':') && !part.startsWith('http')) {
+                                drmKey = part;
+                            } else {
+                                subUrl = part;
+                            }
+                        }
+                        
+                        loadAndPlay(videoUrl, subUrl, drmKey);
                         castModal.classList.remove('active');
                     } else if (msg.startsWith('cmd:')) {
                         const cmd = msg.split(':')[1];
@@ -1023,8 +1035,72 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
+        // Helper chuyển đổi Hex sang Base64URL không padding để làm việc với ClearKey DRM
+        function hexToBase64Url(hexString) {
+            try {
+                const cleanHex = hexString.replace(/[-]/g, '').trim();
+                const matched = cleanHex.match(/\w{2}/g);
+                if (!matched) return "";
+                const binary = matched.map(a => String.fromCharCode(parseInt(a, 16))).join('');
+                return btoa(binary)
+                    .replace(/\+/g, '-')
+                    .replace(/\//g, '_')
+                    .replace(/=+$/, '');
+            } catch (e) {
+                console.error("Lỗi chuyển đổi hex sang base64url: ", e);
+                return "";
+            }
+        }
+
+        // Tách khóa giải mã ClearKey (KID:KEY) dạng Hex từ URL hoặc tham số truyền vào
+        function extractClearKey(url, drmKeyParam) {
+            let keyStr = drmKeyParam || "";
+            
+            if (!keyStr) {
+                try {
+                    const parsedUrl = new URL(url);
+                    keyStr = parsedUrl.searchParams.get('key') || parsedUrl.searchParams.get('clearkey') || parsedUrl.searchParams.get('drm_key') || "";
+                } catch (e) {
+                    // Bỏ qua lỗi phân tích URL của các đường dẫn tương đối
+                }
+            }
+            
+            if (!keyStr) return null;
+            
+            let kid = "";
+            let key = "";
+            if (keyStr.includes(':')) {
+                const parts = keyStr.split(':');
+                kid = parts[0].trim();
+                key = parts[1].trim();
+            } else if (keyStr.includes('=')) {
+                const parts = keyStr.split('=');
+                kid = parts[0].trim();
+                key = parts[1].trim();
+            } else {
+                return null;
+            }
+            
+            if (kid.length === 32 && key.length === 32) {
+                const kidB64 = hexToBase64Url(kid);
+                const keyB64 = hexToBase64Url(key);
+                if (kidB64 && keyB64) {
+                    return { [kidB64]: keyB64 };
+                }
+            }
+            return null;
+        }
+
         // 4. PHÂN TÍCH VÀ PHÁT VIDEO KÈM PHỤ ĐỀ
-        function loadAndPlay(url, subUrl) {
+        function loadAndPlay(url, subUrl, drmKey) {
+            // Chuẩn hóa tham số đầu vào
+            if (subUrl === "null" || subUrl === "undefined" || (typeof subUrl === "string" && subUrl.trim() === "")) {
+                subUrl = null;
+            }
+            if (drmKey === "null" || drmKey === "undefined" || (typeof drmKey === "string" && drmKey.trim() === "")) {
+                drmKey = null;
+            }
+
             currentVideoUrl = url;
             loadingIndicator.classList.add('active');
             
@@ -1061,6 +1137,19 @@
                 
                 if (!dashPlayer) {
                     dashPlayer = dashjs.MediaPlayer().create();
+                } else {
+                    dashPlayer.reset();
+                }
+                
+                // Cấu hình DRM ClearKey nếu được cung cấp trong URL hoặc cast parameters
+                const clearKeysObj = extractClearKey(url, drmKey);
+                if (clearKeysObj) {
+                    console.log("Đang áp dụng khóa giải mã ClearKey DRM:", clearKeysObj);
+                    dashPlayer.setProtectionData({
+                        "org.w3.clearkey": {
+                            "clearkeys": clearKeysObj
+                        }
+                    });
                 }
                 
                 dashPlayer.initialize(video, url, true);
