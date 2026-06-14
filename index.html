@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Smart TV HLS Player - Optimized & Cast</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dashjs/4.7.1/dash.all.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -858,6 +859,8 @@
         const subBgSelect = document.getElementById('sub-bg-select');
 
         let hls;
+        let dashPlayer;
+        let currentVideoUrl = "";
         const hlsConfig = {
             maxBufferLength: 30,
             maxMaxBufferLength: 60,
@@ -1022,6 +1025,7 @@
 
         // 4. PHÂN TÍCH VÀ PHÁT VIDEO KÈM PHỤ ĐỀ
         function loadAndPlay(url, subUrl) {
+            currentVideoUrl = url;
             loadingIndicator.classList.add('active');
             
             // Xóa phụ đề cũ nếu có
@@ -1048,7 +1052,34 @@
                 }
             }
             
-            if (video.canPlayType('application/vnd.apple.mpegurl') || video.canPlayType('application/x-mpegURL')) {
+            // 1. Trường hợp phát MPEG-DASH (.mpd)
+            if (url.toLowerCase().includes('.mpd')) {
+                if (hls) {
+                    hls.destroy();
+                    hls = null;
+                }
+                
+                if (!dashPlayer) {
+                    dashPlayer = dashjs.MediaPlayer().create();
+                }
+                
+                dashPlayer.initialize(video, url, true);
+                
+                dashPlayer.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
+                    loadingIndicator.classList.remove('active');
+                    updateQualityLevels();
+                });
+                
+                dashPlayer.on(dashjs.MediaPlayer.events.ERROR, (e) => {
+                    console.error("DASH Player Error: ", e);
+                    loadingIndicator.classList.remove('active');
+                });
+            }
+            // 2. Trường hợp phát Native HLS (iOS/Safari)
+            else if (video.canPlayType('application/vnd.apple.mpegurl') || video.canPlayType('application/x-mpegURL')) {
+                if (dashPlayer) {
+                    dashPlayer.reset();
+                }
                 if (hls) {
                     hls.destroy();
                     hls = null;
@@ -1063,7 +1094,12 @@
                 };
                 video.addEventListener('loadedmetadata', onPlay);
                 
-            } else if (Hls.isSupported()) {
+            }
+            // 3. Trường hợp phát HLS.js (Tizen, Chrome, Firefox...)
+            else if (Hls.isSupported()) {
+                if (dashPlayer) {
+                    dashPlayer.reset();
+                }
                 if (hls) {
                     hls.destroy();
                 }
@@ -1093,9 +1129,25 @@
                         }
                     }
                 });
-            } else {
-                console.error('Không hỗ trợ phát HLS');
-                loadingIndicator.classList.remove('active');
+            }
+            // 4. Trường hợp link MP4 / Video thông thường hoặc các luồng phát khác
+            else {
+                if (dashPlayer) {
+                    dashPlayer.reset();
+                }
+                if (hls) {
+                    hls.destroy();
+                    hls = null;
+                }
+                video.src = url;
+                video.load();
+                const onPlay = () => {
+                    video.play().catch(e => console.log("Auto-play blocked: ", e));
+                    loadingIndicator.classList.remove('active');
+                    updateQualityLevels();
+                    video.removeEventListener('loadedmetadata', onPlay);
+                };
+                video.addEventListener('loadedmetadata', onPlay);
             }
         }
 
@@ -1158,48 +1210,98 @@
             applySubtitleSettings(subSizeSelect.value, subColorSelect.value, e.target.value);
         };
 
-        // Cập nhật danh sách độ phân giải từ HLS Level
+        // Cập nhật danh sách độ phân giải từ HLS Level hoặc DASH Bitrate
         function updateQualityLevels() {
             const qualityGroup = document.getElementById('quality-setting-group');
             const qualitySelect = document.getElementById('quality-select');
             
             qualityGroup.style.display = 'block';
             
-            // Trường hợp phát trực tiếp không qua Hls.js hoặc link MP4 đơn lẻ
-            if (!hls || !hls.levels || hls.levels.length === 0) {
-                const h = video.videoHeight;
-                const displayText = h ? `${h}p (Chất lượng gốc)` : "Mặc định (Hệ thống)";
-                qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
+            // 1. Trường hợp đang phát MPEG-DASH (.mpd)
+            if (currentVideoUrl.toLowerCase().includes('.mpd') && dashPlayer) {
+                try {
+                    const bitrates = dashPlayer.getBitrateInfoListFor('video');
+                    if (!bitrates || bitrates.length === 0) {
+                        const h = video.videoHeight;
+                        const displayText = h ? `${h}p (Chất lượng gốc)` : "Mặc định (Hệ thống)";
+                        qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
+                        return;
+                    }
+                    
+                    if (bitrates.length === 1) {
+                        const h = bitrates[0].height || video.videoHeight;
+                        const displayText = h ? `${h}p (Chất lượng gốc)` : "Chất lượng gốc";
+                        qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
+                        return;
+                    }
+                    
+                    // Nhiều độ phân giải
+                    const settings = dashPlayer.getSettings();
+                    const isAuto = settings && settings.streaming && settings.streaming.abr && settings.streaming.abr.autoSwitchBitrate && settings.streaming.abr.autoSwitchBitrate.video;
+                    const currentQuality = dashPlayer.getQualityFor('video');
+                    
+                    qualitySelect.innerHTML = `<option value="-1" ${isAuto ? 'selected' : ''}>Tự động (Auto)</option>`;
+                    bitrates.forEach((info, index) => {
+                        const name = info.height ? `${info.height}p` : `${Math.round(info.bitrate / 1000)}kbps`;
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = name;
+                        if (!isAuto && currentQuality === index) {
+                            option.selected = true;
+                        }
+                        qualitySelect.appendChild(option);
+                    });
+                } catch (err) {
+                    console.error("Lỗi đọc chất lượng DASH: ", err);
+                    qualitySelect.innerHTML = '<option value="-1" selected>Tự động (Auto)</option>';
+                }
                 return;
             }
-            
-            // Trường hợp file HLS chỉ có đúng 1 độ phân giải
-            if (hls.levels.length === 1) {
-                const level = hls.levels[0];
-                const h = level.height || video.videoHeight;
-                const displayText = h ? `${h}p (Chất lượng gốc)` : "Chất lượng gốc";
-                qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
-                return;
-            }
-            
-            // Trường hợp luồng có nhiều chất lượng (Multi-bitrate)
-            qualitySelect.innerHTML = '<option value="-1">Tự động (Auto)</option>';
-            
-            hls.levels.forEach((level, index) => {
-                const name = level.name || (level.height ? `${level.height}p` : `Luồng ${index + 1}`);
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = name;
-                qualitySelect.appendChild(option);
-            });
 
-            qualitySelect.value = hls.currentLevel;
+            // 2. Trường hợp đang phát Hls.js (.m3u8)
+            if (hls && hls.levels && hls.levels.length > 0) {
+                if (hls.levels.length === 1) {
+                    const level = hls.levels[0];
+                    const h = level.height || video.videoHeight;
+                    const displayText = h ? `${h}p (Chất lượng gốc)` : "Chất lượng gốc";
+                    qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
+                    return;
+                }
+                
+                qualitySelect.innerHTML = '<option value="-1">Tự động (Auto)</option>';
+                hls.levels.forEach((level, index) => {
+                    const name = level.name || (level.height ? `${level.height}p` : `Luồng ${index + 1}`);
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = name;
+                    qualitySelect.appendChild(option);
+                });
+                qualitySelect.value = hls.currentLevel;
+                return;
+            }
+
+            // 3. Trường hợp phát trực tiếp không qua thư viện hoặc file MP4
+            const h = video.videoHeight;
+            const displayText = h ? `${h}p (Chất lượng gốc)` : "Mặc định (Hệ thống)";
+            qualitySelect.innerHTML = `<option value="-1" selected>${displayText}</option>`;
         }
 
         // Đăng ký sự kiện thay đổi độ phân giải thủ công
         document.getElementById('quality-select').onchange = (e) => {
-            if (hls) {
-                hls.currentLevel = parseInt(e.target.value);
+            const val = parseInt(e.target.value);
+            
+            // Xử lý chất lượng cho DASH
+            if (currentVideoUrl.toLowerCase().includes('.mpd') && dashPlayer) {
+                if (val === -1) {
+                    dashPlayer.updateSettings({ 'streaming': { 'abr': { 'autoSwitchBitrate': { 'video': true } } } });
+                } else {
+                    dashPlayer.updateSettings({ 'streaming': { 'abr': { 'autoSwitchBitrate': { 'video': false } } } });
+                    dashPlayer.setQualityFor('video', val);
+                }
+            }
+            // Xử lý chất lượng cho HLS
+            else if (hls) {
+                hls.currentLevel = val;
             }
         };
 
