@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart TV HLS Player - Optimized & Cast</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --focus-color: #ffeb3b;
+            --bg-dark: #0f0f0f;
+            --text-main: #ffffff;
+            --modal-bg: #1e1e1e;
+            --primary-red: #e50914;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        /* --- STYLE FOCUS TỐI ƯU CHO TV (Bỏ box-shadow tránh lag GPU) --- */
+        [tabindex="0"], .focusable {
+            outline: none;
+        }
+        
+        [tabindex="0"]:focus, .focusable:focus {
+            outline: 5px solid var(--focus-color) !important;
+            outline-offset: 4px;
+            transform: scale(1.05);
+            z-index: 100;
+            background-color: #333;
+        }
+
+        /* Ẩn scrollbar xấu xí mặc định trên Tizen/WebOS */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        .main-app {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        /* --- KHUNG PLAYER --- */
+        .player-wrapper {
+            position: relative;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9;
+            background-color: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 4px solid transparent;
+            /* Chỉ transition các thuộc tính được GPU tăng tốc */
+            transition: border-color 0.2s, transform 0.2s, aspect-ratio 0.4s;
+        }
+
+        .player-wrapper:focus {
+            border-color: var(--focus-color);
+            transform: scale(1.02);
+        }
+
+        #main-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain; /* Giữ tỷ lệ chuẩn, tránh móp méo hình */
+            z-index: 1;
+        }
+
+        /* --- THANH ĐIỀU KHIỂN --- */
+        .controls-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 60%, transparent 100%);
+            padding: 40px 30px 20px 30px;
+            display: flex;
+            flex-direction: column;
+            opacity: 1;
+            transition: opacity 0.4s;
+            z-index: 10;
+            pointer-events: auto;
+        }
+        
+        .controls-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .controls-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 15px 25px;
+            border-radius: 8px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        
+        .btn:focus {
+            background-color: var(--focus-color);
+            color: #000;
+        }
+
+        .time-display {
+            font-size: 22px;
+            margin-left: 20px;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* --- PROGRESS BAR --- */
+        .progress-area {
+            height: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            position: relative;
+            cursor: pointer;
+        }
+        .progress-area:focus {
+            outline: 5px solid var(--focus-color);
+        }
+        .progress-filled {
+            height: 100%;
+            background: var(--primary-red);
+            width: 0%;
+            border-radius: 5px;
+            transition: width 0.1s linear;
+        }
+
+        /* --- MODAL CÀI ĐẶT --- */
+        .settings-modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+            z-index: 50;
+        }
+        .settings-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .settings-modal {
+            background: var(--modal-bg);
+            width: 500px;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.8);
+            border: 1px solid #333;
+        }
+        .settings-modal h3 {
+            font-size: 28px;
+            margin-top: 0;
+            border-bottom: 2px solid #444;
+            padding-bottom: 15px;
+        }
+
+        .setting-group {
+            margin-bottom: 25px;
+        }
+        .setting-group label {
+            font-size: 18px;
+            color: #aaa;
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .setting-group select {
+            width: 100%;
+            font-size: 20px;
+            padding: 15px;
+            background: #111;
+            color: #fff;
+            border: 2px solid #444;
+            border-radius: 8px;
+            outline: none;
+        }
+        .setting-group select:focus {
+            border-color: var(--focus-color);
+        }
+
+        /* --- SERVER LINKS --- */
+        .server-links-container {
+            background-color: #f1c40f;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .server-links-text {
+            color: #000;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .server-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .link-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .link-btn:focus {
+            background: #fff;
+            color: #d35400;
+            outline: 4px solid #d35400;
+            transform: scale(1.1);
+        }
+
+        /* --- DANH SÁCH KÊNH TV --- */
+        .channel-section {
+            margin-top: 30px;
+        }
+        .section-title {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            color: #ccc;
+            border-left: 5px solid var(--focus-color);
+            padding-left: 15px;
+        }
+        
+        .channel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 25px;
+        }
+        
+        .channel-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: background-color 0.2s, border-color 0.2s;
+            cursor: pointer;
+            border: 2px solid #ccc;
+        }
+        .channel-card img {
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
+        }
+        .channel-card .ch-name {
+            margin-top: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .channel-card:focus {
+            border-color: var(--focus-color);
+            background: #ffeaa7;
+        }
+
+        /* Loading indicator */
+        .loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            color: #fff;
+            font-size: 24px;
+            display: none;
+            background: rgba(0,0,0,0.6);
+            padding: 15px 25px;
+            border-radius: 10px;
+        }
+        .loading-indicator.active {
+            display: block;
+        }
+
+        /* ==========================================
+           CSS GIAO DIỆN MOBILE REMOTE (Netflix Style)
+           ========================================== */
+        #app-remote {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            background-color: #0f0f0f;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .remote-card {
+            width: 100%;
+            background: #1e1e1e;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .remote-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-red);
+            text-align: center;
+        }
+
+        .remote-status {
+            font-size: 14px;
+            color: #2ecc71;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .remote-status::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #2ecc71;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #2ecc71;
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        .remote-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 2px solid #444;
+            background-color: #111;
+            color: #fff;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .remote-input:focus {
+            border-color: var(--primary-red);
+        }
+
+        .remote-btn-cast {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: var(--primary-red);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .remote-btn-cast:active {
+            transform: scale(0.98);
+            background-color: #b80710;
+        }
+
+        .remote-dpad-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #888;
+            text-transform: uppercase;
+            text-align: center;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        .remote-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            justify-items: center;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .remote-circle-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            border: none;
+            background: #2b2b2b;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        .remote-circle-btn:active {
+            transform: scale(0.92);
+            background-color: #3f3f3f;
+        }
+
+        .remote-circle-btn.play-pause-btn {
+            background-color: #fff;
+            color: #111;
+            width: 75px;
+            height: 75px;
+            font-size: 26px;
+        }
+
+        .remote-circle-btn.play-pause-btn:active {
+            background-color: #ccc;
+        }
+
+        .remote-channels-section {
+            width: 100%;
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .remote-channels-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+        }
+
+        .remote-channel-btn {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .remote-channel-btn img {
+            height: 25px;
+            width: 40px;
+            object-fit: contain;
+        }
+
+        .remote-channel-btn span {
+            font-size: 14px;
+        }
+
+        .remote-channel-btn:active {
+            background-color: #333;
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+<!-- CHẾ ĐỘ PHÁT TRÊN TV (PLAYER MODE) -->
+<div class="main-app" id="app-player">
+    <div class="player-wrapper" id="player-wrapper" tabindex="0" title="Nhấn OK để toàn màn hình">
+        <video id="main-video" crossorigin="anonymous"></video>
+        <div class="loading-indicator" id="loading-indicator">
+            <i class="fas fa-spinner fa-spin"></i> Đang tải luồng...
+        </div>
+        
+        <div class="controls-overlay" id="controls-overlay">
+            <div class="progress-area focusable" id="progress-area" tabindex="0">
+                <div class="progress-filled" id="progress-filled"></div>
+            </div>
+
+            <div class="controls-main">
+                <div style="display: flex; align-items: center;">
+                    <button class="btn focusable" id="play-pause-btn" tabindex="0"><i class="fas fa-pause"></i></button>
+                    <button class="btn focusable" id="mute-btn" tabindex="0" style="margin-left: 15px;"><i class="fas fa-volume-up"></i></button>
+                    <!-- Nút Cast kết nối điện thoại trên TV -->
+                    <button class="btn focusable" id="cast-toggle-btn" tabindex="0" style="margin-left: 15px;" title="PLAYER LINK"><i class="fas fa-tv"></i> PLAYER LINK</button>
+                    <div class="time-display">
+                        <span id="current-time">0:00</span> / <span id="duration-time">0:00</span>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn focusable" id="settings-toggle" tabindex="0"><i class="fas fa-cog"></i></button>
+                    <button class="btn focusable" id="fullscreen-btn" tabindex="0" style="margin-left: 15px;"><i class="fas fa-expand"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Cài đặt Player -->
+        <div class="settings-modal-overlay" id="settings-modal-overlay">
+            <div class="settings-modal">
+                <h3>Cài đặt Player</h3>
+                
+                <div class="setting-group">
+                    <label>TỶ LỆ KHUNG HÌNH</label>
+                    <select id="aspect-ratio-select" tabindex="0" class="focusable">
+                        <option value="16/9" selected>16:9 (Mặc định)</option>
+                        <option value="4/3">4:3 (Truyền thống)</option>
+                        <option value="21/9">21:9 (Điện ảnh)</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label>TỐC ĐỘ PHÁT</label>
+                    <select id="speed-select" tabindex="0" class="focusable">
+                        <option value="1" selected>1.0x (Chuẩn)</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2">2.0x</option>
+                    </select>
+                </div>
+
+                <button class="btn focusable" id="close-modal-btn" tabindex="0" style="width: 100%; background: #444; margin-top: 10px;">ĐÓNG</button>
+            </div>
+        </div>
+
+        <!-- Modal Quét Mã QR để Cast -->
+        <div class="settings-modal-overlay" id="cast-modal-overlay">
+            <div class="settings-modal" style="text-align: center; width: 450px;">
+                <h3 style="margin-bottom: 20px;"><i class="fas fa-tv"></i> Kết nối điện thoại</h3>
+                <div style="background: white; padding: 15px; display: inline-block; border-radius: 12px; margin-bottom: 20px;">
+                    <img id="cast-qr-image" src="" alt="Mã QR" style="display: block; width: 200px; height: 200px;">
+                </div>
+                <p style="font-size: 16px; color: #ccc; margin-bottom: 25px; line-height: 1.4;">
+                    Quét mã QR bằng Camera điện thoại để biến điện thoại thành remote điều khiển và truyền (cast) link video lên TV tức thì.
+                </p>
+                <button class="btn focusable" id="close-cast-btn" tabindex="0" style="width: 100%; background: #444;">ĐÓNG</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="server-links-container">
+        <div class="server-links-text">Nếu kênh bị lỗi, vui lòng chọn các Link khác để xem!</div>
+        <div class="server-links">
+            <button class="link-btn focusable" tabindex="0" id="link-1">LINK 1</button>
+            <button class="link-btn focusable" tabindex="0" id="link-2">LINK 2</button>
+            <button class="link-btn focusable" tabindex="0" id="link-3">LINK 3</button>
+        </div>
+    </div>
+
+    <div class="channel-section">
+        <div class="section-title">Danh Sách Kênh</div>
+        <div class="channel-grid" id="channel-grid">
+        </div>
+    </div>
+</div>
+
+<!-- CHẾ ĐỘ ĐIỀU KHIỂN TRÊN ĐIỆN THOẠI (REMOTE MODE) -->
+<div id="app-remote" style="display: none;">
+    <div class="remote-card">
+        <div class="remote-title"><i class="fas fa-tv"></i> Smart TV Remote</div>
+        <div class="remote-status" id="remote-room-title">Đang kết nối...</div>
+        
+        <input type="text" class="remote-input" id="remote-input-url" placeholder="Dán link video (.m3u8, .mp4, ...)">
+        <button class="remote-btn-cast" id="remote-btn-cast">
+            <i class="fas fa-paper-plane"></i> 🚀 BẮN LÊN TV
+        </button>
+
+        <div class="remote-dpad-title">Bộ điều khiển nhanh</div>
+        <div class="remote-grid">
+            <button class="remote-circle-btn" id="remote-vol-up"><i class="fas fa-volume-up"></i></button>
+            <button class="remote-circle-btn" id="remote-mute"><i class="fas fa-volume-mute"></i></button>
+            <button class="remote-circle-btn" id="remote-vol-down"><i class="fas fa-volume-down"></i></button>
+
+            <button class="remote-circle-btn" id="remote-seek-back"><i class="fas fa-backward"></i></button>
+            <button class="remote-circle-btn play-pause-btn" id="remote-play-pause"><i class="fas fa-play"></i></button>
+            <button class="remote-circle-btn" id="remote-seek-forward"><i class="fas fa-forward"></i></button>
+        </div>
+        <button class="remote-btn-cast" id="remote-stop" style="background-color: #333; margin-top: 5px;">
+            <i class="fas fa-stop"></i> Dừng phát
+        </button>
+
+        <div class="remote-channels-section">
+            <div class="remote-dpad-title">Danh sách kênh TV</div>
+            <div class="remote-channels-grid" id="remote-channels-grid">
+                <!-- Danh sách kênh hiển thị trên điện thoại -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Khởi tạo các kênh có sẵn
+    const channels = [
+        { name: "VTV3 HD", logo: "https://xem360.net/image/vtv3.png", url: "https://live-a.fptplay53.net/live/media/vtv3/live247-hls-avc/vtv3-avc1_5600000=10000-mp4a_131600=20000.m3u8" },
+        { name: "VTV1 HD", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Logo_VTV1_2013.svg/1200px-Logo_VTV1_2013.svg.png", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+        { name: "VTV2 HD", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Logo_VTV2_2013.svg/1200px-Logo_VTV2_2013.svg.png", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" }
+    ];
+
+    // Trình chủ ntfy.sh (Public Free Broker)
+    const NTFY_SERVER = "https://ntfy.sh/";
+
+    // Phân tích chế độ từ URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    let roomID = urlParams.get('room');
+
+    if (mode === 'remote' && roomID) {
+        initRemoteMode();
+    } else {
+        initPlayerMode();
+    }
+
+    // ==========================================
+    // CHẾ ĐỘ 1: BỘ ĐIỀU KHIỂN TRÊN ĐIỆN THOẠI (REMOTE)
+    // ==========================================
+    function initRemoteMode() {
+        document.getElementById('app-player').style.display = 'none';
+        document.getElementById('app-remote').style.display = 'flex';
+        document.getElementById('remote-room-title').innerText = `Phòng: ${roomID}`;
+
+        const inputUrl = document.getElementById('remote-input-url');
+        const btnCast = document.getElementById('remote-btn-cast');
+
+        // Gửi lệnh sang tivi qua API POST của ntfy.sh
+        const sendSignal = (msg) => {
+            fetch(NTFY_SERVER + roomID, {
+                method: 'POST',
+                body: msg
+            }).catch(err => console.error("Lỗi gửi tín hiệu: ", err));
+        };
+
+        btnCast.onclick = () => {
+            const url = inputUrl.value.trim();
+            if (url) {
+                sendSignal(url);
+                inputUrl.value = "";
+                alert("Đã bắn link lên TV!");
+            }
+        };
+
+        // Render các kênh có sẵn lên remote điện thoại để bấm nhanh
+        const remoteChannelGrid = document.getElementById('remote-channels-grid');
+        channels.forEach(ch => {
+            const btn = document.createElement('button');
+            btn.className = 'remote-channel-btn';
+            btn.innerHTML = `
+                <img src="${ch.logo}" alt="${ch.name}">
+                <span>${ch.name}</span>
+            `;
+            btn.onclick = () => {
+                sendSignal(ch.url);
+            };
+            remoteChannelGrid.appendChild(btn);
+        });
+
+        // Đăng ký sự kiện các nút remote
+        document.getElementById('remote-play-pause').onclick = () => sendSignal('cmd:play');
+        document.getElementById('remote-mute').onclick = () => sendSignal('cmd:mute');
+        document.getElementById('remote-vol-up').onclick = () => sendSignal('cmd:volup');
+        document.getElementById('remote-vol-down').onclick = () => sendSignal('cmd:voldown');
+        document.getElementById('remote-seek-back').onclick = () => sendSignal('cmd:seekback');
+        document.getElementById('remote-seek-forward').onclick = () => sendSignal('cmd:seekforward');
+        document.getElementById('remote-stop').onclick = () => sendSignal('cmd:stop');
+    }
+
+    // ==========================================
+    // CHẾ ĐỘ 2: TRÌNH PHÁT TRÊN SMART TV (PLAYER)
+    // ==========================================
+    function initPlayerMode() {
+        const video = document.getElementById('main-video');
+        const wrapper = document.getElementById('player-wrapper');
+        const controlsOverlay = document.getElementById('controls-overlay');
+        const modal = document.getElementById('settings-modal-overlay');
+        const castModal = document.getElementById('cast-modal-overlay');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        
+        const castToggleBtn = document.getElementById('cast-toggle-btn');
+        const closeCastBtn = document.getElementById('close-cast-btn');
+        const castQrImage = document.getElementById('cast-qr-image');
+
+        let hls;
+        const hlsConfig = {
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            liveSyncDurationCount: 3,
+            liveMaxLatencyDurationCount: 10,
+            enableWorker: true
+        };
+
+        // Tự động sinh ID phòng ngẫu nhiên và lưu lại
+        if (!roomID) {
+            roomID = localStorage.getItem('tv_room_id');
+            if (!roomID) {
+                roomID = "tv_" + Math.random().toString(36).substring(2, 10);
+                localStorage.setItem('tv_room_id', roomID);
+            }
+            const newUrl = window.location.pathname + `?room=${roomID}`;
+            window.history.replaceState(null, '', newUrl);
+        }
+
+        // LẮNG NGHE TÍN HIỆU CAST TỪ ĐIỆN THOẠI (SSE)
+        const eventSource = new EventSource(`${NTFY_SERVER}${roomID}/sse`);
+        eventSource.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                if (data.event === "message" && data.message) {
+                    const msg = data.message.trim();
+                    if (msg.startsWith('http://') || msg.startsWith('https://')) {
+                        loadAndPlay(msg);
+                        castModal.classList.remove('active');
+                    } else if (msg.startsWith('cmd:')) {
+                        const cmd = msg.split(':')[1];
+                        executeRemoteCommand(cmd);
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi xử lý SSE: ", err);
+            }
+        };
+
+        function executeRemoteCommand(cmd) {
+            switch (cmd) {
+                case 'play':
+                    video.paused ? video.play() : video.pause();
+                    break;
+                case 'mute':
+                    video.muted = !video.muted;
+                    document.getElementById('mute-btn').innerHTML = video.muted ? 
+                        '<i class="fas fa-volume-mute" style="color:#e74c3c"></i>' : 
+                        '<i class="fas fa-volume-up"></i>';
+                    break;
+                case 'volup':
+                    video.volume = Math.min(1, video.volume + 0.1);
+                    break;
+                case 'voldown':
+                    video.volume = Math.max(0, video.volume - 0.1);
+                    break;
+                case 'seekback':
+                    video.currentTime = Math.max(0, video.currentTime - 10);
+                    break;
+                case 'seekforward':
+                    video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
+                    break;
+                case 'stop':
+                    video.pause();
+                    video.currentTime = 0;
+                    break;
+            }
+        }
+
+        // Đăng ký phím Media với tivi Samsung Tizen
+        function registerTVKeys() {
+            if (window.tizen && window.tizen.tvinputdevice) {
+                try {
+                    const keys = [
+                        'MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop',
+                        'MediaFastForward', 'MediaRewind', 'VolumeMute',
+                        'ChannelUp', 'ChannelDown'
+                    ];
+                    keys.forEach(key => window.tizen.tvinputdevice.registerKey(key));
+                } catch (e) {
+                    console.error("Tizen key registration error: ", e);
+                }
+            }
+        }
+
+        // Tạo giao diện kênh TV trên màn hình
+        const channelGrid = document.getElementById('channel-grid');
+        channels.forEach(ch => {
+            const card = document.createElement('div');
+            card.className = 'channel-card focusable';
+            card.tabIndex = 0;
+            card.dataset.url = ch.url;
+            card.innerHTML = `
+                <img src="${ch.logo}" alt="${ch.name}">
+                <div class="ch-name">${ch.name}</div>
+            `;
+            card.onclick = () => {
+                loadAndPlay(ch.url);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+            channelGrid.appendChild(card);
+        });
+
+        document.getElementById('link-1').onclick = () => {
+            loadAndPlay("https://live-a.fptplay53.net/live/media/vtv3/live247-hls-avc/vtv3-avc1_5600000=10000-mp4a_131600=20000.m3u8");
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        document.getElementById('link-2').onclick = () => {
+            loadAndPlay("https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8");
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        document.getElementById('link-3').onclick = () => {
+            loadAndPlay("https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8");
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // Logic phát luồng Native-First HLS
+        function loadAndPlay(url) {
+            loadingIndicator.classList.add('active');
+            
+            if (video.canPlayType('application/vnd.apple.mpegurl') || video.canPlayType('application/x-mpegURL')) {
+                if (hls) {
+                    hls.destroy();
+                    hls = null;
+                }
+                video.src = url;
+                video.load(); 
+                const onPlay = () => {
+                    video.play().catch(e => console.log("Auto-play blocked: ", e));
+                    loadingIndicator.classList.remove('active');
+                    video.removeEventListener('loadedmetadata', onPlay);
+                };
+                video.addEventListener('loadedmetadata', onPlay);
+                
+            } else if (Hls.isSupported()) {
+                if (hls) {
+                    hls.destroy();
+                }
+                hls = new Hls(hlsConfig);
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play().catch(e => console.log("Auto-play blocked: ", e));
+                    loadingIndicator.classList.remove('active');
+                });
+
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                hls.destroy();
+                                loadingIndicator.classList.remove('active');
+                                break;
+                        }
+                    }
+                });
+            } else {
+                console.error('Không hỗ trợ phát HLS');
+                loadingIndicator.classList.remove('active');
+            }
+        }
+
+        function updatePlayIcon(isPaused) {
+            document.getElementById('play-pause-btn').innerHTML = isPaused ? '<i class="fas fa-play"></i>' : '<i class="fas fa-pause"></i>';
+        }
+
+        video.addEventListener('play', () => { updatePlayIcon(false); });
+        video.addEventListener('pause', () => { updatePlayIcon(true); });
+
+        video.addEventListener('timeupdate', () => {
+            if (video.duration) {
+                document.getElementById('progress-filled').style.width = (video.currentTime / video.duration) * 100 + '%';
+                document.getElementById('current-time').innerText = formatTime(video.currentTime);
+                document.getElementById('duration-time').innerText = formatTime(video.duration);
+            }
+        });
+
+        function formatTime(s) {
+            if (!isFinite(s)) return "Trực tiếp";
+            let m = Math.floor(s / 60);
+            let sec = Math.floor(s % 60);
+            return m + ":" + (sec < 10 ? "0" + sec : sec);
+        }
+
+        // Tác vụ nút điều khiển trên tivi
+        document.getElementById('play-pause-btn').onclick = () => video.paused ? video.play() : video.pause();
+        
+        document.getElementById('mute-btn').onclick = () => {
+            video.muted = !video.muted;
+            document.getElementById('mute-btn').innerHTML = video.muted ? 
+                '<i class="fas fa-volume-mute" style="color:#e74c3c"></i>' : 
+                '<i class="fas fa-volume-up"></i>';
+        };
+        
+        document.getElementById('fullscreen-btn').onclick = () => {
+            if (!document.fullscreenElement) wrapper.requestFullscreen();
+            else document.exitFullscreen();
+        };
+
+        document.getElementById('settings-toggle').onclick = () => {
+            modal.classList.add('active');
+            document.getElementById('aspect-ratio-select').focus();
+        };
+        
+        document.getElementById('close-modal-btn').onclick = () => {
+            modal.classList.remove('active');
+            document.getElementById('settings-toggle').focus();
+        };
+
+        // Gắn sự kiện cho Modal Cast
+        const remoteURL = `${window.location.origin}${window.location.pathname}?mode=remote&room=${roomID}`;
+        castToggleBtn.onclick = () => {
+            castQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(remoteURL)}`;
+            castModal.classList.add('active');
+            closeCastBtn.focus();
+        };
+
+        closeCastBtn.onclick = () => {
+            castModal.classList.remove('active');
+            castToggleBtn.focus();
+        };
+
+        document.getElementById('aspect-ratio-select').onchange = (e) => {
+            wrapper.style.aspectRatio = e.target.value;
+        };
+        
+        document.getElementById('speed-select').onchange = (e) => {
+            video.playbackRate = parseFloat(e.target.value);
+        };
+
+        // ==========================================
+        // THUẬT TOÁN ĐIỀU HƯỚNG 2D SPATIAL NAVIGATION
+        // ==========================================
+        function getDistance(rect1, rect2) {
+            const x1 = rect1.left + rect1.width / 2;
+            const y1 = rect1.top + rect1.height / 2;
+            const x2 = rect2.left + rect2.width / 2;
+            const y2 = rect2.top + rect2.height / 2;
+            return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        }
+
+        function isInDirection(rectFrom, rectTo, direction) {
+            const centerFromX = rectFrom.left + rectFrom.width / 2;
+            const centerFromY = rectFrom.top + rectFrom.height / 2;
+            const centerToX = rectTo.left + rectTo.width / 2;
+            const centerToY = rectTo.top + rectTo.height / 2;
+
+            switch (direction) {
+                case 'left': return centerToX < centerFromX;
+                case 'right': return centerToX > centerFromX;
+                case 'up': return centerToY < centerFromY;
+                case 'down': return centerToY > centerFromY;
+                default: return false;
+            }
+        }
+
+        function findNearestElement(currentElement, direction) {
+            const focusables = getFocusableElements();
+            const currentRect = currentElement.getBoundingClientRect();
+            
+            let nearestElement = null;
+            let minAngleDistance = Infinity;
+
+            for (const element of focusables) {
+                if (element === currentElement) continue;
+                
+                const rect = element.getBoundingClientRect();
+                if (!isInDirection(currentRect, rect, direction)) continue;
+
+                const distance = getDistance(currentRect, rect);
+                const centerCurrentX = currentRect.left + currentRect.width / 2;
+                const centerCurrentY = currentRect.top + currentRect.height / 2;
+                const centerTargetX = rect.left + rect.width / 2;
+                const centerTargetY = rect.top + rect.height / 2;
+                
+                let angle = 0;
+                if (direction === 'left' || direction === 'right') {
+                    angle = Math.abs((centerTargetY - centerCurrentY) / (centerTargetX - centerCurrentX || 1));
+                } else {
+                    angle = Math.abs((centerTargetX - centerCurrentX) / (centerTargetY - centerCurrentY || 1));
+                }
+
+                const score = angle * 1000 + distance;
+
+                if (score < minAngleDistance) {
+                    minAngleDistance = score;
+                    nearestElement = element;
+                }
+            }
+            return nearestElement;
+        }
+
+        function getFocusableElements() {
+            if (modal.classList.contains('active')) {
+                return Array.from(modal.querySelectorAll('.focusable')).filter(el => {
+                    const style = window.getComputedStyle(el);
+                    return style.display !== 'none' && style.visibility !== 'hidden';
+                });
+            }
+            if (castModal.classList.contains('active')) {
+                return Array.from(castModal.querySelectorAll('.focusable')).filter(el => {
+                    const style = window.getComputedStyle(el);
+                    return style.display !== 'none' && style.visibility !== 'hidden';
+                });
+            }
+
+            return Array.from(document.querySelectorAll('.focusable')).filter(el => {
+                if (controlsOverlay.classList.contains('hidden') && controlsOverlay.contains(el)) {
+                    return false;
+                }
+                const style = window.getComputedStyle(el);
+                return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;
+            });
+        }
+
+        // ==========================================
+        // XỬ LÝ PHÍM BẤM TV & IDLE TIMER
+        // ==========================================
+        let idleTimer;
+        let isSeeking = false;
+
+        function resetTVIdleTimer() {
+            controlsOverlay.classList.remove('hidden');
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                if (!video.paused && !modal.classList.contains('active') && !castModal.classList.contains('active') && !isSeeking) {
+                    if (controlsOverlay.contains(document.activeElement)) {
+                        wrapper.focus();
+                    }
+                    controlsOverlay.classList.add('hidden');
+                }
+            }, 5000);
+        }
+
+        const KEY_CODES = {
+            LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40,
+            PLAY_PAUSE: 179, PLAY: 415, PAUSE: 19, STOP: 413,
+            FAST_FORWARD: 417, REWIND: 412, CHANNEL_UP: 427, CHANNEL_DOWN: 428,
+            ENTER: 13, RETURN: 10009, BACK: 8, BACK_ANDROID: 4, ESCAPE: 27,
+            VOLUME_UP: 447, VOLUME_DOWN: 448, VOLUME_MUTE: 449,
+            RED: 403, GREEN: 404, YELLOW: 405, BLUE: 406,
+            GUIDE: 458, INFO: 457, MENU: 18
+        };
+
+        document.addEventListener('keydown', (e) => {
+            resetTVIdleTimer();
+            const keyCode = e.keyCode || e.which;
+            const activeElement = document.activeElement;
+
+            // Xử lý phím trong Settings Modal
+            if (modal.classList.contains('active')) {
+                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.BACK_ANDROID) {
+                    e.preventDefault();
+                    document.getElementById('close-modal-btn').click();
+                    return;
+                }
+                if (keyCode === KEY_CODES.DOWN || keyCode === KEY_CODES.UP || keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT) {
+                    e.preventDefault();
+                    const direction = keyCode === KEY_CODES.DOWN ? 'down' : 
+                                     keyCode === KEY_CODES.UP ? 'up' :
+                                     keyCode === KEY_CODES.RIGHT ? 'right' : 'left';
+                    const nextElement = findNearestElement(activeElement, direction);
+                    if (nextElement) nextElement.focus();
+                    return;
+                }
+                if (keyCode === KEY_CODES.ENTER) {
+                    e.preventDefault();
+                    if (activeElement && activeElement !== document.body) activeElement.click();
+                    return;
+                }
+                return;
+            }
+
+            // Xử lý phím trong Cast Modal
+            if (castModal.classList.contains('active')) {
+                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.BACK_ANDROID) {
+                    e.preventDefault();
+                    closeCastBtn.click();
+                    return;
+                }
+                return;
+            }
+
+            if (activeElement.id === 'progress-area') {
+                if (keyCode === KEY_CODES.LEFT) {
+                    e.preventDefault();
+                    video.currentTime = Math.max(0, video.currentTime - 10);
+                    return;
+                }
+                if (keyCode === KEY_CODES.RIGHT) {
+                    e.preventDefault();
+                    video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
+                    return;
+                }
+            }
+
+            switch (keyCode) {
+                case KEY_CODES.PLAY_PAUSE:
+                case KEY_CODES.PLAY:
+                case KEY_CODES.PAUSE:
+                    e.preventDefault();
+                    video.paused ? video.play() : video.pause();
+                    return;
+                case KEY_CODES.STOP:
+                    e.preventDefault();
+                    video.pause();
+                    video.currentTime = 0;
+                    return;
+                case KEY_CODES.FAST_FORWARD:
+                    e.preventDefault();
+                    video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 30);
+                    return;
+                case KEY_CODES.REWIND:
+                    e.preventDefault();
+                    video.currentTime = Math.max(0, video.currentTime - 30);
+                    return;
+                case KEY_CODES.CHANNEL_UP:
+                    e.preventDefault();
+                    const currentUrl = video.src || (hls && hls.url);
+                    const currentIndex = channels.findIndex(ch => ch.url === currentUrl);
+                    const nextIndex = (currentIndex + 1) % channels.length;
+                    if (nextIndex >= 0) {
+                        loadAndPlay(channels[nextIndex].url);
+                        const channelCards = document.querySelectorAll('.channel-card');
+                        if (channelCards[nextIndex]) channelCards[nextIndex].focus();
+                    }
+                    return;
+                case KEY_CODES.CHANNEL_DOWN:
+                    e.preventDefault();
+                    const currentUrlDown = video.src || (hls && hls.url);
+                    const currentIdx = channels.findIndex(ch => ch.url === currentUrlDown);
+                    const prevIndex = (currentIdx - 1 + channels.length) % channels.length;
+                    if (prevIndex >= 0) {
+                        loadAndPlay(channels[prevIndex].url);
+                        const channelCards = document.querySelectorAll('.channel-card');
+                        if (channelCards[prevIndex]) channelCards[prevIndex].focus();
+                    }
+                    return;
+                case KEY_CODES.VOLUME_UP:
+                    e.preventDefault();
+                    video.volume = Math.min(1, video.volume + 0.1);
+                    return;
+                case KEY_CODES.VOLUME_DOWN:
+                    e.preventDefault();
+                    video.volume = Math.max(0, video.volume - 0.1);
+                    return;
+                case KEY_CODES.VOLUME_MUTE:
+                    e.preventDefault();
+                    document.getElementById('mute-btn').click();
+                    return;
+                case KEY_CODES.BACK:
+                case KEY_CODES.RETURN:
+                case KEY_CODES.BACK_ANDROID:
+                case KEY_CODES.ESCAPE:
+                    e.preventDefault();
+                    if (document.fullscreenElement) document.exitFullscreen();
+                    return;
+                case KEY_CODES.GUIDE:
+                    e.preventDefault();
+                    document.querySelector('.channel-section').scrollIntoView({ behavior: 'smooth' });
+                    const firstChannel = document.querySelector('.channel-card');
+                    if (firstChannel) firstChannel.focus();
+                    return;
+                case KEY_CODES.INFO:
+                    e.preventDefault();
+                    controlsOverlay.classList.toggle('hidden');
+                    return;
+                case KEY_CODES.MENU:
+                    e.preventDefault();
+                    document.getElementById('settings-toggle').click();
+                    return;
+                case KEY_CODES.RED:
+                    e.preventDefault();
+                    document.getElementById('link-1').click();
+                    return;
+                case KEY_CODES.GREEN:
+                    e.preventDefault();
+                    document.getElementById('link-2').click();
+                    return;
+                case KEY_CODES.YELLOW:
+                    e.preventDefault();
+                    document.getElementById('link-3').click();
+                    return;
+                case KEY_CODES.BLUE:
+                    e.preventDefault();
+                    document.getElementById('mute-btn').click();
+                    return;
+            }
+
+            if (keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT || 
+                keyCode === KEY_CODES.UP || keyCode === KEY_CODES.DOWN) {
+                e.preventDefault();
+                const direction = keyCode === KEY_CODES.LEFT ? 'left' :
+                                  keyCode === KEY_CODES.RIGHT ? 'right' :
+                                  keyCode === KEY_CODES.UP ? 'up' : 'down';
+                
+                const targetElement = activeElement === wrapper ? document.getElementById('play-pause-btn') : activeElement;
+                const nextElement = findNearestElement(targetElement, direction);
+                
+                if (nextElement) {
+                    nextElement.focus();
+                    nextElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+                }
+                return;
+            }
+
+            if (keyCode === KEY_CODES.ENTER) {
+                e.preventDefault();
+                if (activeElement && activeElement !== document.body) {
+                    activeElement.click();
+                }
+                return;
+            }
+        });
+
+        // Khởi động
+        registerTVKeys();
+        loadAndPlay(channels[0].url);
+
+        window.onload = () => {
+            document.getElementById('play-pause-btn').focus();
+            resetTVIdleTimer();
+        };
+    }
+</script>
+</body>
+</html>
