@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dashjs/4.7.1/dash.all.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@400;600;800&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -18,7 +19,9 @@
             /* Cài đặt biến phụ đề mặc định */
             --sub-color: #ffffff;
             --sub-size: 32px;
-            --sub-bg: rgba(0, 0, 0, 0.8);
+            --sub-bg: rgba(0, 0, 0, 0.6);
+            --sub-font: 'Outfit', 'Inter', sans-serif;
+            --sub-shadow: 2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8);
         }
 
         * {
@@ -93,15 +96,11 @@
 
         /* --- CUSTOM STYLE CHO CUE PHỤ ĐỀ (NATIVE TRÊN TV) --- */
         video::cue {
-            color: var(--sub-color) !important;
-            font-size: var(--sub-size) !important;
-            background-color: var(--sub-bg) !important;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.9),
-                         -1px -1px 0 rgba(0,0,0,0.8),
-                         1px -1px 0 rgba(0,0,0,0.8),
-                         -1px 1px 0 rgba(0,0,0,0.8),
-                         1px 1px 0 rgba(0,0,0,0.8) !important;
+            color: var(--sub-color, #ffffff) !important;
+            font-size: var(--sub-size, 32px) !important;
+            background-color: var(--sub-bg, rgba(0,0,0,0.6)) !important;
+            font-family: var(--sub-font, 'Outfit', 'Inter', sans-serif) !important;
+            text-shadow: var(--sub-shadow, 2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)) !important;
         }
 
         /* --- THANH ĐIỀU KHIỂN --- */
@@ -930,33 +929,59 @@
             </select>
         </div>
 
+        <div class="setting-group">
+            <label>GITHUB ACCESS TOKEN (CHO KHO RIÊNG TƯ / PRIVATE)</label>
+            <input type="password" id="github-token-input" placeholder="Nhập ghp_... (Tùy chọn)" class="focusable" style="width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; margin-top: 5px; box-sizing: border-box;">
+        </div>
+
         <h3 style="margin-top: 25px; font-size: 22px; border-bottom: 2px solid #444; padding-bottom: 8px;">Cài đặt Phụ đề</h3>
 
         <div class="setting-group">
-            <label>MÀU SẮC PHỤ ĐỀ</label>
+            <label>MÀU SẮC CHỮ</label>
             <select id="sub-color-select" tabindex="0" class="focusable">
-                <option value="#ffffff" selected>Trắng</option>
-                <option value="#ffeb3b">Vàng</option>
-                <option value="#00e5ff">Xanh lam</option>
+                <option value="#ffffff" selected>Trắng tinh khôi</option>
+                <option value="#ffeb3b">Vàng ấm áp (Netflix)</option>
+                <option value="#00ff00">Xanh lục dịu mắt</option>
+                <option value="#00e5ff">Xanh ngọc hiện đại</option>
             </select>
         </div>
 
         <div class="setting-group">
-            <label>KÍCH THƯỚC PHỤ ĐỀ</label>
+            <label>FONT CHỮ</label>
+            <select id="sub-font-select" tabindex="0" class="focusable">
+                <option value="'Outfit', 'Inter', sans-serif" selected>Outfit (Premium)</option>
+                <option value="'Inter', sans-serif">Inter (Hiện đại)</option>
+                <option value="'Roboto', sans-serif">Roboto (Tinh gọn)</option>
+                <option value="'Courier New', monospace">Courier (Cổ điển)</option>
+            </select>
+        </div>
+
+        <div class="setting-group">
+            <label>KÍCH THƯỚC CHỮ</label>
             <select id="sub-size-select" tabindex="0" class="focusable">
-                <option value="24px">Nhỏ</option>
-                <option value="32px" selected>Vừa (Chuẩn)</option>
-                <option value="40px">Lớn</option>
-                <option value="48px">Rất lớn</option>
+                <option value="24px">Nhỏ (Màn lớn cận cảnh)</option>
+                <option value="32px" selected>Vừa (Chuẩn điện ảnh)</option>
+                <option value="40px">Lớn (Dễ đọc hơn)</option>
+                <option value="48px">Rất lớn (Hỗ trợ thị lực)</option>
             </select>
         </div>
 
         <div class="setting-group">
-            <label>NỀN PHỤ ĐỀ</label>
+            <label>KIỂU VIỀN CHỮ / BÓNG ĐỔ</label>
+            <select id="sub-shadow-select" tabindex="0" class="focusable">
+                <option value="2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)" selected>Bóng đổ viền đen mịn (Chuẩn Netflix)</option>
+                <option value="0 0 6px #000, 0 0 6px #000, 0 0 6px #000, 0 0 6px #000">Viền đen đậm bao quanh (Độ tương phản cao)</option>
+                <option value="none">Không viền (Tối giản)</option>
+            </select>
+        </div>
+
+        <div class="setting-group">
+            <label>NỀN HOẶC HỘP PHỤ ĐỀ (OPACITY)</label>
             <select id="sub-bg-select" tabindex="0" class="focusable">
-                <option value="rgba(0, 0, 0, 0.8)" selected>Đen đậm</option>
-                <option value="rgba(0, 0, 0, 0.4)">Mờ</option>
-                <option value="transparent">Không nền</option>
+                <option value="transparent" selected>Không nền (Trong suốt hoàn toàn - Tốt nhất)</option>
+                <option value="rgba(0, 0, 0, 0.4)">Hộp mờ bán trong suốt (40%)</option>
+                <option value="rgba(0, 0, 0, 0.7)">Hộp trung bình (70%)</option>
+                <option value="rgba(0, 0, 0, 0.95)">Hộp đen đậm (95% - Tránh lóa)</option>
             </select>
         </div>
 
@@ -1030,13 +1055,51 @@
     const NTFY_SERVER = "https://ntfy.sh/";
     const APP_PIN = "1234"; // MÃ PIN BẢO MẬT MẶC ĐỊNH
 
+    // Helper chuyển đổi link raw sang API Github để hỗ trợ private repo và CORS
+    function getGithubApiUrl(rawUrl) {
+        try {
+            const url = new URL(rawUrl);
+            if (url.hostname === 'raw.githubusercontent.com') {
+                const parts = url.pathname.split('/').filter(p => p);
+                if (parts.length >= 3) {
+                    const owner = parts[0];
+                    const repo = parts[1];
+                    let branchIdx = 2;
+                    if (parts[2] === 'refs' && parts[3] === 'heads') {
+                        branchIdx = 4;
+                    }
+                    const branch = parts[branchIdx];
+                    const filePath = parts.slice(branchIdx + 1).join('/');
+                    return `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`;
+                }
+            }
+        } catch (e) {
+            console.error("Lỗi phân tích GitHub URL:", e);
+        }
+        return rawUrl;
+    }
+
     // Hàm tải danh sách kênh động từ GitHub (Sử dụng chung cho cả TV và Điện thoại)
     async function fetchDynamicChannels() {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout 5 giây
             
-            const response = await fetch(CHANNELS_JSON_URL + "?_ts=" + Date.now(), { signal: controller.signal });
+            const token = localStorage.getItem('github_token') || '';
+            const headers = {};
+            let url = CHANNELS_JSON_URL + "?_ts=" + Date.now();
+            
+            if (token) {
+                headers['Authorization'] = `token ${token}`;
+                headers['Accept'] = 'application/vnd.github.v3.raw';
+                // Chuyển sang API Github để tránh lỗi CORS khi truyền Token
+                url = getGithubApiUrl(CHANNELS_JSON_URL);
+            }
+            
+            const response = await fetch(url, { 
+                signal: controller.signal,
+                headers: headers
+            });
             clearTimeout(timeoutId);
 
             if (response.ok) {
@@ -1170,9 +1233,12 @@
 
         // Elements cấu hình phụ đề
         const subColorSelect = document.getElementById('sub-color-select');
+        const subFontSelect = document.getElementById('sub-font-select');
         const subSizeSelect = document.getElementById('sub-size-select');
+        const subShadowSelect = document.getElementById('sub-shadow-select');
         const subBgSelect = document.getElementById('sub-bg-select');
         const corsProxySelect = document.getElementById('cors-proxy-select');
+        const githubTokenInput = document.getElementById('github-token-input');
 
         let hls;
         let dashPlayer;
@@ -1978,39 +2044,66 @@
         function loadSubtitleSettings() {
             const size = localStorage.getItem('sub_size') || '32px';
             const color = localStorage.getItem('sub_color') || '#ffffff';
-            const bg = localStorage.getItem('sub_bg') || 'rgba(0, 0, 0, 0.8)';
+            const bg = localStorage.getItem('sub_bg') || 'transparent';
+            const font = localStorage.getItem('sub_font') || "'Outfit', 'Inter', sans-serif";
+            const shadow = localStorage.getItem('sub_shadow') || "2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)";
 
             subSizeSelect.value = size;
             subColorSelect.value = color;
             subBgSelect.value = bg;
+            if (subFontSelect) subFontSelect.value = font;
+            if (subShadowSelect) subShadowSelect.value = shadow;
 
-            applySubtitleSettings(size, color, bg);
+            applySubtitleSettings(size, color, bg, font, shadow);
             loadCorsProxySettings();
+            loadGithubTokenSettings();
         }
 
-        function applySubtitleSettings(size, color, bg) {
+        function applySubtitleSettings(size, color, bg, font, shadow) {
             document.documentElement.style.setProperty('--sub-size', size);
             document.documentElement.style.setProperty('--sub-color', color);
             document.documentElement.style.setProperty('--sub-bg', bg);
+            if (font) document.documentElement.style.setProperty('--sub-font', font);
+            if (shadow) document.documentElement.style.setProperty('--sub-shadow', shadow);
         }
 
-        subColorSelect.onchange = (e) => {
-            localStorage.setItem('sub_color', e.target.value);
-            applySubtitleSettings(subSizeSelect.value, e.target.value, subBgSelect.value);
-        };
-        subSizeSelect.onchange = (e) => {
-            localStorage.setItem('sub_size', e.target.value);
-            applySubtitleSettings(e.target.value, subColorSelect.value, subBgSelect.value);
-        };
-        subBgSelect.onchange = (e) => {
-            localStorage.setItem('sub_bg', e.target.value);
-            applySubtitleSettings(subSizeSelect.value, subColorSelect.value, e.target.value);
-        };
+        function getSubtitleSettings() {
+            return {
+                size: subSizeSelect.value,
+                color: subColorSelect.value,
+                bg: subBgSelect.value,
+                font: subFontSelect ? subFontSelect.value : "'Outfit', 'Inter', sans-serif",
+                shadow: subShadowSelect ? subShadowSelect.value : "2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)"
+            };
+        }
+
+        function saveAndApplySubtitleSettings() {
+            const settings = getSubtitleSettings();
+            localStorage.setItem('sub_size', settings.size);
+            localStorage.setItem('sub_color', settings.color);
+            localStorage.setItem('sub_bg', settings.bg);
+            localStorage.setItem('sub_font', settings.font);
+            localStorage.setItem('sub_shadow', settings.shadow);
+            applySubtitleSettings(settings.size, settings.color, settings.bg, settings.font, settings.shadow);
+        }
+
+        subColorSelect.onchange = saveAndApplySubtitleSettings;
+        subSizeSelect.onchange = saveAndApplySubtitleSettings;
+        subBgSelect.onchange = saveAndApplySubtitleSettings;
+        if (subFontSelect) subFontSelect.onchange = saveAndApplySubtitleSettings;
+        if (subShadowSelect) subShadowSelect.onchange = saveAndApplySubtitleSettings;
 
         // 5.1 CẤU HÌNH CORS PROXY VÀ VƯỢT CƠ CHẾ CORS
         function loadCorsProxySettings() {
             const val = localStorage.getItem('cors_proxy') || 'off';
             corsProxySelect.value = val;
+        }
+
+        function loadGithubTokenSettings() {
+            const token = localStorage.getItem('github_token') || '';
+            if (githubTokenInput) {
+                githubTokenInput.value = token;
+            }
         }
 
         corsProxySelect.onchange = (e) => {
@@ -2022,6 +2115,18 @@
                 loadAndPlay(currentVideoUrl, subUrl, null);
             }
         };
+
+        if (githubTokenInput) {
+            githubTokenInput.onchange = (e) => {
+                const token = e.target.value.trim();
+                localStorage.setItem('github_token', token);
+                // Tải lại danh sách kênh động ngay lập tức từ private repo
+                fetchDynamicChannels().then(() => {
+                    renderTabs();
+                    renderChannels(channels);
+                });
+            };
+        }
 
         // Hàm định dạng tên chất lượng ngắn gọn, thẩm mỹ (Auto, 4K, 2K, 1080p, 720p, v.v.)
         function getShortQualityName(height, fallbackName) {
@@ -2178,11 +2283,13 @@
         function openSettingsModal(triggerElement) {
             lastModalOpenedFrom = triggerElement;
             modal.classList.add('active');
+            isCacheValid = false;
             document.getElementById('cors-proxy-select').focus();
         }
 
         function closeSettingsModal() {
             modal.classList.remove('active');
+            isCacheValid = false;
             if (lastModalOpenedFrom && lastModalOpenedFrom.isConnected) {
                 lastModalOpenedFrom.focus();
             } else {
@@ -2194,11 +2301,13 @@
             lastModalOpenedFrom = triggerElement;
             castQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(remoteURL)}`;
             castModal.classList.add('active');
+            isCacheValid = false;
             closeCastBtn.focus();
         }
 
         function closeCastModal() {
             castModal.classList.remove('active');
+            isCacheValid = false;
             if (lastModalOpenedFrom && lastModalOpenedFrom.isConnected) {
                 lastModalOpenedFrom.focus();
             } else {
@@ -2533,23 +2642,34 @@
 
             // Xử lý phím trong Settings Modal
             if (modal.classList.contains('active')) {
-                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.BACK_ANDROID) {
+                const isInputActive = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
+
+                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.BACK_ANDROID || (keyCode === KEY_CODES.BACK && !isInputActive)) {
                     e.preventDefault();
                     document.getElementById('close-modal-btn').click();
                     return;
                 }
-                if (keyCode === KEY_CODES.DOWN || keyCode === KEY_CODES.UP || keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT) {
+                if (keyCode === KEY_CODES.DOWN || keyCode === KEY_CODES.UP || (!isInputActive && (keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT))) {
                     e.preventDefault();
                     const direction = keyCode === KEY_CODES.DOWN ? 'down' : 
-                                     keyCode === KEY_CODES.UP ? 'up' :
-                                     keyCode === KEY_CODES.RIGHT ? 'right' : 'left';
+                                      keyCode === KEY_CODES.UP ? 'up' :
+                                      keyCode === KEY_CODES.RIGHT ? 'right' : 'left';
                     const nextElement = findNearestElement(activeElement, direction);
                     if (nextElement) nextElement.focus();
                     return;
                 }
+                if (isInputActive && (keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT)) {
+                    // Cho phép di chuyển con trỏ trong ô nhập liệu
+                    return;
+                }
                 if (keyCode === KEY_CODES.ENTER) {
-                    e.preventDefault();
-                    if (activeElement && activeElement !== document.body) activeElement.click();
+                    if (isInputActive) {
+                        activeElement.blur();
+                        e.preventDefault();
+                    } else {
+                        e.preventDefault();
+                        if (activeElement && activeElement !== document.body) activeElement.click();
+                    }
                     return;
                 }
                 return;
@@ -2697,6 +2817,34 @@
         // Tự động hiện/ẩn thanh điều khiển khi tương tác chuột/pointer
         wrapper.addEventListener('mousemove', resetTVIdleTimer);
         wrapper.addEventListener('click', resetTVIdleTimer);
+
+        // Tự động di chuyển modal vào trong player-wrapper khi ở chế độ Fullscreen để hiển thị tốt trên Smart TV
+        const handleFullscreenChange = () => {
+            const playerWrapper = document.getElementById('player-wrapper');
+            const settingsModalOverlay = document.getElementById('settings-modal-overlay');
+            const castModalOverlay = document.getElementById('cast-modal-overlay');
+            
+            const fsElement = document.fullscreenElement || 
+                              document.webkitFullscreenElement || 
+                              document.mozFullScreenElement || 
+                              document.msFullscreenElement;
+
+            if (fsElement === playerWrapper) {
+                if (playerWrapper) {
+                    if (settingsModalOverlay) playerWrapper.appendChild(settingsModalOverlay);
+                    if (castModalOverlay) playerWrapper.appendChild(castModalOverlay);
+                }
+            } else {
+                if (settingsModalOverlay) document.body.appendChild(settingsModalOverlay);
+                if (castModalOverlay) document.body.appendChild(castModalOverlay);
+            }
+            isCacheValid = false;
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
         // Khởi chạy hệ thống trên Tivi
         async function initTVApp() {
