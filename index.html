@@ -371,6 +371,38 @@
             box-shadow: 0 0 20px var(--focus-color);
         }
 
+        /* Tối ưu hóa cho Smart TV & Màn hình lớn (min-width: 1200px) */
+        @media (min-width: 1200px) {
+            .channel-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 35px;
+            }
+            .channel-card img {
+                height: 110px; /* Tăng kích thước logo trên TV */
+            }
+            .channel-card .ch-name {
+                font-size: 18px; /* Tên kênh to rõ hơn trên TV */
+            }
+        }
+
+        /* Tối ưu hóa cho Điện thoại di động (max-width: 576px) */
+        @media (max-width: 576px) {
+            .channel-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Chia 2 cột trên điện thoại */
+                gap: 15px;
+            }
+            .channel-card {
+                padding: 12px;
+            }
+            .channel-card img {
+                height: 70px; /* Thu nhỏ logo vừa vặn mobile */
+            }
+            .channel-card .ch-name {
+                margin-top: 10px;
+                font-size: 14px;
+            }
+        }
+
         /* Loading indicator */
         .loading-indicator {
             position: absolute;
