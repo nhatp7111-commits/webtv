@@ -156,7 +156,7 @@
 
         /* --- PROGRESS BAR (Premium Glass & Glow) --- */
         .progress-area {
-            height: 24px; /* Vùng chạm lớn giúp dễ click, nhưng chiều cao bố cục không đổi */
+            height: 36px; /* Tăng từ 24px lên 36px để vùng click/chạm cực kỳ rộng rãi */
             position: relative;
             cursor: pointer;
             display: flex;
@@ -174,44 +174,44 @@
             position: absolute;
             left: 0;
             right: 0;
-            height: 6px;
+            height: 8px; /* Tăng độ dày mặc định lên 8px */
             background: rgba(255, 255, 255, 0.12);
-            border-radius: 3px;
+            border-radius: 4px;
             transition: height 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease;
         }
         .progress-area:hover::before,
         .progress-area:focus::before {
-            height: 8px;
+            height: 12px; /* Tăng độ dày khi tương tác lên 12px */
             background: rgba(255, 255, 255, 0.22);
         }
         .progress-filled {
             position: absolute;
             left: 0;
-            height: 6px;
+            height: 8px; /* Tương thích 8px mặc định */
             background: linear-gradient(90deg, var(--primary-red) 0%, #ff4d4d 50%, var(--primary-red) 100%);
             background-size: 200% 100%;
             width: 0%;
-            border-radius: 3px;
+            border-radius: 4px;
             transition: width 0.1s linear, height 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: none;
             z-index: 1;
         }
         .progress-area:hover .progress-filled,
         .progress-area:focus .progress-filled {
-            height: 8px;
+            height: 12px; /* Tương thích 12px khi tương tác */
         }
         .progress-area:focus .progress-filled {
             animation: progressShimmer 2s infinite linear;
         }
-        /* Nút tròn định vị (Seek Thumb) */
+        /* Nút tròn định vị (Seek Thumb) lớn hơn */
         .progress-filled::after {
             content: '';
             position: absolute;
-            right: -7px; /* Căn giữa hoàn hảo cho nút 14px */
+            right: -9px; /* Căn giữa hoàn hảo cho nút 18px */
             top: 50%;
             transform: translateY(-50%) scale(0);
-            width: 14px;
-            height: 14px;
+            width: 18px; /* Tăng kích thước từ 14px lên 18px */
+            height: 18px;
             background: #ffffff;
             border-radius: 50%;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
@@ -222,22 +222,22 @@
         .progress-area:hover .progress-filled::after {
             transform: translateY(-50%) scale(1);
         }
-        /* TV Focus: Hào quang vàng mờ tinh tế tỏa từ tâm nút định vị */
+        /* TV Focus: Nút định vị to 22.5px (scale 1.25) và hào quang rộng màu vàng lung linh */
         .progress-area:focus .progress-filled::after {
             transform: translateY(-50%) scale(1.25);
-            border: 2px solid var(--focus-color);
+            border: 2.5px solid var(--focus-color);
             box-shadow: 
-                0 0 0 3px rgba(255, 235, 59, 0.25), /* Vòng sáng ngoài mỏng */
-                0 0 12px var(--focus-color),         /* Hào quang trung tâm */
+                0 0 0 4px rgba(255, 235, 59, 0.25), /* Vòng sáng ngoài rộng hơn */
+                0 0 16px var(--focus-color),         /* Hào quang trung tâm */
                 0 2px 6px rgba(0, 0, 0, 0.5);        /* Bóng đổ */
         }
         /* Hiệu ứng bấm nút bấm vật lý (Active State) */
         .progress-area:active::before {
-            height: 10px;
+            height: 14px;
             background: rgba(255, 255, 255, 0.3);
         }
         .progress-area:active .progress-filled {
-            height: 10px;
+            height: 14px;
         }
         .progress-area:active .progress-filled::after {
             transform: translateY(-50%) scale(0.95);
