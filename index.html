@@ -1208,7 +1208,7 @@
         return false;
     }
 
-    // Hàm tải danh sách kênh động từ GitHub (Sử dụng chung cho cả TV và Điện thoại)
+    // Hàm tải danh sách kênh động từ GitHub (Phiên bản nâng cấp chống Cache & Tự phục hồi)
     async function fetchDynamicChannels(pin) {
         if (cachedEncryptedData && pin) {
             return decryptAndLoad(cachedEncryptedData, pin);
@@ -1219,40 +1219,91 @@
             const timeoutId = setTimeout(() => controller.abort(), 8000); // Timeout 8 giây
             
             const token = localStorage.getItem('github_token') || '';
-            const headers = {};
-            let url = CHANNELS_JSON_URL + "?_ts=" + Date.now();
+            const antiCacheParams = `_ts=${Date.now()}&_r=${Math.random().toString(36).substring(2, 10)}`;
             
-            if (token) {
+            // Lớp 3: Định nghĩa headers chống cache mặc định
+            const headers = {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            };
+            
+            let useToken = !!token;
+            let url = CHANNELS_JSON_URL + (CHANNELS_JSON_URL.includes('?') ? '&' : '?') + antiCacheParams;
+            
+            if (useToken) {
                 headers['Authorization'] = `token ${token}`;
                 headers['Accept'] = 'application/vnd.github.v3.raw';
-                url = getGithubApiUrl(CHANNELS_JSON_URL);
+                const apiUrl = getGithubApiUrl(CHANNELS_JSON_URL);
+                url = apiUrl + (apiUrl.includes('?') ? '&' : '?') + antiCacheParams;
             }
             
-            const response = await fetch(url, { 
-                signal: controller.signal,
-                headers: headers
-            });
+            console.log(`[WebTV] Đang tải danh sách kênh chống cache...`);
+            let response;
+            try {
+                // Lớp 2: Thiết lập cache: 'no-store'
+                response = await fetch(url, { 
+                    signal: controller.signal,
+                    headers: headers,
+                    cache: 'no-store'
+                });
+            } catch (fetchErr) {
+                if (useToken) {
+                    console.warn("Lỗi kết nối khi dùng Token. Chuyển sang tải công khai không Token...");
+                    useToken = false;
+                } else {
+                    throw fetchErr;
+                }
+            }
+
+            // TỰ PHỤC HỒI: Nếu dùng Token bị lỗi xác thực hoặc giới hạn (401/403), tải lại không dùng Token
+            if (useToken && (response.status === 401 || response.status === 403)) {
+                console.warn(`Token lỗi hoặc hết hạn (HTTP ${response.status}). Đang tự phục hồi bằng link công khai...`);
+                const publicUrl = CHANNELS_JSON_URL + (CHANNELS_JSON_URL.includes('?') ? '&' : '?') + antiCacheParams;
+                const publicHeaders = {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                };
+                response = await fetch(publicUrl, {
+                    signal: controller.signal,
+                    headers: publicHeaders,
+                    cache: 'no-store'
+                });
+            }
+            
             clearTimeout(timeoutId);
 
-            if (response.ok) {
-                const encryptedText = await response.text();
-                cachedEncryptedData = encryptedText.trim();
-                localStorage.setItem('cached_channels_enc', cachedEncryptedData); // Lưu cache offline
+            if (response && response.ok) {
+                const encryptedText = (await response.text()).trim();
                 
-                if (pin) {
-                    return decryptAndLoad(cachedEncryptedData, pin);
+                // XÁC THỰC DỮ LIỆU: CryptoJS AES luôn bắt đầu bằng "U2FsdGVkX1"
+                if (encryptedText.startsWith("U2FsdGVkX1")) {
+                    cachedEncryptedData = encryptedText;
+                    localStorage.setItem('cached_channels_enc', cachedEncryptedData); // Chỉ lưu cache khi dữ liệu hợp lệ
+                    console.log("✅ Tải danh sách kênh online thành công.");
+                    
+                    if (pin) {
+                        return decryptAndLoad(cachedEncryptedData, pin);
+                    }
+                } else {
+                    throw new Error("Dữ liệu tải về không đúng định dạng mã hóa AES (CryptoJS)");
                 }
             } else {
-                throw new Error("HTTP " + response.status);
+                throw new Error("HTTP " + (response ? response.status : "Unknown"));
             }
         } catch (err) {
-            console.warn("Không thể tải cấu hình kênh online. Thử dùng dữ liệu offline.", err);
+            console.warn("⚠️ Không thể tải cấu hình kênh online. Thử dùng dữ liệu offline.", err);
             const offlineData = localStorage.getItem('cached_channels_enc');
-            if (offlineData) {
+            
+            // Chỉ sử dụng dữ liệu offline nếu nó hợp lệ
+            if (offlineData && offlineData.trim().startsWith("U2FsdGVkX1")) {
                 cachedEncryptedData = offlineData;
                 if (pin) {
                     return decryptAndLoad(cachedEncryptedData, pin);
                 }
+            } else {
+                console.error("❌ Dữ liệu offline cũng không hợp lệ hoặc trống.");
             }
         }
         return false;
