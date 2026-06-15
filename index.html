@@ -350,10 +350,17 @@
             cursor: pointer;
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            
+            /* Sắp xếp linh hoạt theo chiều dọc để các tên kênh luôn thẳng hàng ở dưới */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
         }
         .channel-card img {
             width: 100%;
-            height: 90px;
+            height: auto;
+            max-height: 140px; /* Chiều cao tối đa mặc định */
             object-fit: contain;
             filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.4));
         }
@@ -378,7 +385,7 @@
                 gap: 35px;
             }
             .channel-card img {
-                height: 110px; /* Tăng kích thước logo trên TV */
+                max-height: 180px; /* Logo đứng/ngang to hơn trên TV */
             }
             .channel-card .ch-name {
                 font-size: 18px; /* Tên kênh to rõ hơn trên TV */
@@ -395,7 +402,7 @@
                 padding: 12px;
             }
             .channel-card img {
-                height: 70px; /* Thu nhỏ logo vừa vặn mobile */
+                max-height: 110px; /* Logo đứng/ngang tối đa trên mobile */
             }
             .channel-card .ch-name {
                 margin-top: 10px;
