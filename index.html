@@ -1032,11 +1032,6 @@
             </select>
         </div>
 
-        <div class="setting-group">
-            <label>GITHUB ACCESS TOKEN (CHO KHO RIÊNG TƯ / PRIVATE)</label>
-            <input type="password" id="github-token-input" placeholder="Nhập ghp_... (Tùy chọn)" class="focusable" style="width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; margin-top: 5px; box-sizing: border-box;">
-        </div>
-
         <h3 style="margin-top: 25px; font-size: 22px; border-bottom: 2px solid #444; padding-bottom: 8px;">Cài đặt Phụ đề</h3>
 
         <div class="setting-group">
@@ -1353,7 +1348,6 @@
         const subBgSelect = document.getElementById('sub-bg-select');
         const subPositionSelect = document.getElementById('sub-position-select');
         const corsProxySelect = document.getElementById('cors-proxy-select');
-        const githubTokenInput = document.getElementById('github-token-input');
 
         let hls;
         let dashPlayer;
@@ -2280,7 +2274,6 @@
             applySubtitleSettings(size, color, bg, font, shadow);
             applySubtitlePosition(parseInt(position));
             loadCorsProxySettings();
-            loadGithubTokenSettings();
         }
 
         function applySubtitleSettings(size, color, bg, font, shadow) {
@@ -2327,13 +2320,6 @@
             corsProxySelect.value = val;
         }
 
-        function loadGithubTokenSettings() {
-            const token = localStorage.getItem('github_token') || '';
-            if (githubTokenInput) {
-                githubTokenInput.value = token;
-            }
-        }
-
         corsProxySelect.onchange = (e) => {
             localStorage.setItem('cors_proxy', e.target.value);
             if (currentVideoUrl) {
@@ -2343,18 +2329,6 @@
                 loadAndPlay(currentVideoUrl, subUrl, null);
             }
         };
-
-        if (githubTokenInput) {
-            githubTokenInput.onchange = (e) => {
-                const token = e.target.value.trim();
-                localStorage.setItem('github_token', token);
-                // Tải lại danh sách kênh động ngay lập tức từ private repo
-                fetchDynamicChannels().then(() => {
-                    renderTabs();
-                    renderChannels(channels);
-                });
-            };
-        }
 
         // Hàm định dạng tên chất lượng ngắn gọn, thẩm mỹ (Auto, 4K, 2K, 1080p, 720p, v.v.)
         function getShortQualityName(height, fallbackName) {
