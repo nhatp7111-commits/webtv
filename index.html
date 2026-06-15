@@ -6,6 +6,7 @@
     <title>Smart TV HLS Player - Optimized & Cast</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dashjs/4.7.1/dash.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@400;600;800&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
@@ -1156,12 +1157,12 @@
         { name: "VTV2 HD", logo: "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/logo/VTV2_150x902_1675158864.webp", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", category: "Truyền hình" }
     ];
 
-    // Đường dẫn URL cấu hình danh sách kênh động trên GitHub
-    const CHANNELS_JSON_URL = "https://raw.githubusercontent.com/nhatp7111-commits/webtv-configs/refs/heads/main/channels.json";
+    // Đường dẫn URL cấu hình danh sách kênh đã mã hóa AES
+    const CHANNELS_JSON_URL = "https://raw.githubusercontent.com/nhatp7111-commits/webtv-configs/refs/heads/main/channels.enc";
 
     // Trình chủ ntfy.sh (Public Free Broker)
     const NTFY_SERVER = "https://ntfy.sh/";
-    const APP_PIN = "1234"; // MÃ PIN BẢO MẬT MẶC ĐỊNH
+    let cachedEncryptedData = ""; // Lưu trữ tạm chuỗi mã hóa tải về
 
     // Helper chuyển đổi link raw sang API Github để hỗ trợ private repo và CORS
     function getGithubApiUrl(rawUrl) {
@@ -1187,11 +1188,35 @@
         return rawUrl;
     }
 
+    // Hàm giải mã danh sách kênh bằng PIN
+    function decryptAndLoad(encryptedText, pin) {
+        try {
+            const bytes = CryptoJS.AES.decrypt(encryptedText, pin);
+            const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+            if (!decryptedText) return false;
+            
+            const data = JSON.parse(decryptedText);
+            if (Array.isArray(data) && data.length > 0) {
+                channels.length = 0;
+                channels.push(...data);
+                console.log("Đã giải mã và cập nhật danh sách kênh thành công!");
+                return true;
+            }
+        } catch (e) {
+            console.error("Lỗi giải mã danh sách kênh:", e);
+        }
+        return false;
+    }
+
     // Hàm tải danh sách kênh động từ GitHub (Sử dụng chung cho cả TV và Điện thoại)
-    async function fetchDynamicChannels() {
+    async function fetchDynamicChannels(pin) {
+        if (cachedEncryptedData && pin) {
+            return decryptAndLoad(cachedEncryptedData, pin);
+        }
+
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout 5 giây
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // Timeout 8 giây
             
             const token = localStorage.getItem('github_token') || '';
             const headers = {};
@@ -1200,7 +1225,6 @@
             if (token) {
                 headers['Authorization'] = `token ${token}`;
                 headers['Accept'] = 'application/vnd.github.v3.raw';
-                // Chuyển sang API Github để tránh lỗi CORS khi truyền Token
                 url = getGithubApiUrl(CHANNELS_JSON_URL);
             }
             
@@ -1211,16 +1235,27 @@
             clearTimeout(timeoutId);
 
             if (response.ok) {
-                const data = await response.json();
-                if (Array.isArray(data) && data.length > 0) {
-                    channels.length = 0;
-                    channels.push(...data);
-                    console.log("Đã cập nhật danh sách kênh thành công từ GitHub!");
+                const encryptedText = await response.text();
+                cachedEncryptedData = encryptedText.trim();
+                localStorage.setItem('cached_channels_enc', cachedEncryptedData); // Lưu cache offline
+                
+                if (pin) {
+                    return decryptAndLoad(cachedEncryptedData, pin);
                 }
+            } else {
+                throw new Error("HTTP " + response.status);
             }
         } catch (err) {
-            console.warn("Không thể tải cấu hình kênh online. Sử dụng danh sách dự phòng nội bộ.", err);
+            console.warn("Không thể tải cấu hình kênh online. Thử dùng dữ liệu offline.", err);
+            const offlineData = localStorage.getItem('cached_channels_enc');
+            if (offlineData) {
+                cachedEncryptedData = offlineData;
+                if (pin) {
+                    return decryptAndLoad(cachedEncryptedData, pin);
+                }
+            }
         }
+        return false;
     }
 
     // Phân tích chế độ từ URL
@@ -1229,25 +1264,35 @@
     let roomID = urlParams.get('room');
 
     if (mode === 'remote' && roomID) {
-        // KIỂM TRA PIN TRÊN ĐIỆN THOẠI TRƯỚC
-        let savedPin = localStorage.getItem('app_pin');
-        while (savedPin !== APP_PIN) {
-            const entered = prompt("Vui lòng nhập mã PIN bảo mật:");
-            if (entered === null) {
-                document.body.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>Không có quyền truy cập.</h2>";
-                window.stop();
-                break;
+        // 1. Tải dữ liệu mã hóa trước
+        fetchDynamicChannels().then(async () => {
+            // 2. Thử tự động giải mã bằng PIN đã lưu
+            let savedPin = localStorage.getItem('app_pin') || '';
+            let decryptSuccess = false;
+            if (savedPin) {
+                decryptSuccess = decryptAndLoad(cachedEncryptedData, savedPin);
             }
-            if (entered === APP_PIN) {
-                localStorage.setItem('app_pin', entered);
-                savedPin = entered;
-            } else {
-                alert("Sai mã PIN!");
+
+            // 3. Nếu chưa giải mã được, yêu cầu nhập PIN bằng prompt
+            while (!decryptSuccess) {
+                const entered = prompt("Vui lòng nhập mã PIN bảo mật để mở khóa Remote:");
+                if (entered === null) {
+                    document.body.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>Không có quyền truy cập.</h2>";
+                    window.stop();
+                    break;
+                }
+                decryptSuccess = decryptAndLoad(cachedEncryptedData, entered);
+                if (decryptSuccess) {
+                    localStorage.setItem('app_pin', entered);
+                } else {
+                    alert("Sai mã PIN!");
+                }
             }
-        }
-        if (savedPin === APP_PIN) {
-            initRemoteMode();
-        }
+
+            if (decryptSuccess) {
+                initRemoteMode();
+            }
+        });
     } else {
         initPlayerMode();
     }
@@ -1260,9 +1305,6 @@
         document.getElementById('app-player').style.display = 'none';
         document.getElementById('app-remote').style.display = 'flex';
         document.getElementById('remote-room-title').innerText = `Phòng: ${roomID}`;
-
-        // Tải danh sách kênh mới nhất từ GitHub trước khi render
-        await fetchDynamicChannels();
 
         const inputUrl = document.getElementById('remote-input-url');
         const inputSub = document.getElementById('remote-input-sub');
@@ -1426,28 +1468,6 @@
             },
         };
 
-        // 1. KIỂM TRA PIN BẢO MẬT TRÊN TIVI
-        function checkPinAuthentication() {
-            const savedPin = localStorage.getItem('app_pin');
-            if (savedPin === APP_PIN) {
-                pinOverlay.style.display = 'none';
-                // Focus vào Tab đầu tiên khi đã xác thực PIN
-                const firstTab = document.querySelector('.tv-tab-btn');
-                if (firstTab) {
-                    firstTab.focus();
-                } else {
-                    const firstCard = document.querySelector('.channel-card');
-                    if (firstCard) firstCard.focus();
-                }
-            } else {
-                pinOverlay.style.display = 'flex';
-                setTimeout(() => {
-                    const firstBtn = document.querySelector('.pin-btn');
-                    if (firstBtn) firstBtn.focus();
-                }, 100);
-            }
-        }
-
         // Đăng ký các nút PIN ảo
         document.querySelectorAll('.pin-btn').forEach(btn => {
             btn.onclick = () => {
@@ -1457,9 +1477,12 @@
                     pinInput.value = "";
                     pinError.innerText = "";
                 } else if (val === 'OK') {
-                    if (currentPinText === APP_PIN) {
+                    const success = decryptAndLoad(cachedEncryptedData, currentPinText);
+                    if (success) {
                         localStorage.setItem('app_pin', currentPinText);
                         pinOverlay.style.display = 'none';
+                        renderTabs();
+                        renderChannels(channels);
                         const firstCard = document.querySelector('.channel-card');
                         if (firstCard) {
                             firstCard.focus();
@@ -3253,14 +3276,34 @@
             // 1. Tải kênh online từ GitHub
             await fetchDynamicChannels();
             
-            // 2. Render các tab danh mục kênh
-            renderTabs();
+            // 2. Thử tự động giải mã bằng PIN đã lưu
+            const savedPin = localStorage.getItem('app_pin') || '';
+            let decryptSuccess = false;
+            if (savedPin) {
+                decryptSuccess = decryptAndLoad(cachedEncryptedData, savedPin);
+            }
             
-            // 3. Render lưới kênh mặc định
-            renderChannels(channels);
-            
-            // 4. Kiểm tra mã PIN bảo mật
-            checkPinAuthentication();
+            if (decryptSuccess) {
+                // Giải mã thành công -> ẩn overlay nhập PIN
+                pinOverlay.style.display = 'none';
+                renderTabs();
+                renderChannels(channels);
+                
+                const firstTab = document.querySelector('.tv-tab-btn');
+                if (firstTab) {
+                    firstTab.focus();
+                } else {
+                    const firstCard = document.querySelector('.channel-card');
+                    if (firstCard) firstCard.focus();
+                }
+            } else {
+                // Chưa giải mã được -> hiện overlay nhập PIN
+                pinOverlay.style.display = 'flex';
+                setTimeout(() => {
+                    const firstBtn = document.querySelector('.pin-btn');
+                    if (firstBtn) firstBtn.focus();
+                }, 100);
+            }
             
             // 5. Khởi tạo SSE
             SSEManager.init(roomID);
