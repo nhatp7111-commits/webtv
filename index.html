@@ -156,21 +156,50 @@
 
         /* --- PROGRESS BAR --- */
         .progress-area {
-            height: 10px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 5px;
+            height: 24px; /* Vùng chạm lớn hơn cho trỏ chuột/cảm ứng nhưng giữ chiều cao bố cục cố định */
             position: relative;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .progress-area::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            transition: height 0.15s ease;
+        }
+        .progress-area:hover::before,
+        .progress-area:focus::before {
+            height: 12px;
         }
         .progress-area:focus {
-            outline: 5px solid var(--focus-color);
+            outline: none;
+        }
+        .progress-area:focus::after {
+            content: '';
+            position: absolute;
+            inset: -4px -4px;
+            border: 3px solid var(--focus-color);
+            border-radius: 8px;
+            pointer-events: none;
         }
         .progress-filled {
-            height: 100%;
+            position: absolute;
+            left: 0;
+            height: 8px;
             background: var(--primary-red);
             width: 0%;
-            border-radius: 5px;
-            transition: width 0.1s linear;
+            border-radius: 4px;
+            transition: width 0.1s linear, height 0.15s ease;
+            pointer-events: none;
+        }
+        .progress-area:hover .progress-filled,
+        .progress-area:focus .progress-filled {
+            height: 12px;
         }
 
         /* --- MODAL CÀI ĐẶT --- */
@@ -1282,6 +1311,8 @@
         let hls;
         let dashPlayer;
         let currentVideoUrl = "";
+        let channelNumberBuffer = "";
+        let channelNumberTimeout = null;
         
         // Custom Loader class để tự động định tuyến toàn bộ request qua CORS proxy
         class CorsProxyLoader {
@@ -2434,6 +2465,36 @@
             else document.exitFullscreen();
         };
 
+        const progressArea = document.getElementById('progress-area');
+        function handleProgressPointer(e) {
+            if (!video.duration || !isFinite(video.duration)) return;
+            
+            // Lọc sự kiện Enter/OK của TV giả lập click (0,0)
+            if (e.type === 'click' && e.clientX === 0 && e.clientY === 0) {
+                return;
+            }
+
+            const rect = progressArea.getBoundingClientRect();
+            let clientX;
+            if (e.type === 'touchstart' || e.type === 'touchmove') {
+                clientX = e.touches[0].clientX;
+            } else {
+                clientX = e.clientX;
+            }
+
+            const clickX = clientX - rect.left;
+            const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+            
+            video.currentTime = ratio * video.duration;
+            resetTVIdleTimer();
+            
+            const percentage = Math.round(ratio * 100);
+            showSeekToast(`Tua đến ${percentage}% (${formatTime(video.currentTime)})`);
+        }
+        progressArea.addEventListener('click', handleProgressPointer);
+        progressArea.addEventListener('touchstart', handleProgressPointer, { passive: true });
+        progressArea.addEventListener('touchmove', handleProgressPointer, { passive: true });
+
         let lastModalOpenedFrom = null;
 
         function openSettingsModal(triggerElement) {
@@ -2796,7 +2857,7 @@
                      activeElement.id === 'mute-btn' || 
                      activeElement.id === 'play-pause-btn');
 
-                if (isControlsHidden || !isNavigatingButtons) {
+                if (isControlsHidden || (!isNavigatingButtons && activeElement.id !== 'progress-area')) {
                     e.preventDefault();
                     resetTVIdleTimer();
                     const seekAmount = 10;
@@ -2851,6 +2912,104 @@
 
             resetTVIdleTimer();
 
+            // Chặn phím số chuyển kênh nếu đang gõ dữ liệu trong các ô Input (Cài đặt Token...)
+            const isInputActive = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
+
+            // ========== 1. XỬ LÝ PHÍM SỐ (0-9) ĐỂ CHUYỂN KÊNH NHANH ==========
+            if (keyCode >= 48 && keyCode <= 57 && !isInputActive) {
+                e.preventDefault();
+                resetTVIdleTimer();
+                
+                const num = keyCode - 48;
+                channelNumberBuffer += num;
+                showSeekToast(`Nhập số kênh: ${channelNumberBuffer}`);
+                
+                clearTimeout(channelNumberTimeout);
+                channelNumberTimeout = setTimeout(() => {
+                    const targetChNum = parseInt(channelNumberBuffer, 10);
+                    const chIndex = targetChNum - 1; // 1-based index sang 0-based index
+                    
+                    if (chIndex >= 0 && chIndex < channels.length) {
+                        const targetCh = channels[chIndex];
+                        showSeekToast(`Đang chuyển đến kênh ${targetChNum}: ${targetCh.name}`);
+                        loadAndPlay(targetCh.url, targetCh.subtitle || targetCh.sub, targetCh.key || targetCh.drm);
+                        
+                        // Đồng bộ tiêu điểm lưới kênh
+                        const card = document.querySelectorAll('.channel-card')[chIndex];
+                        if (card) {
+                            card.focus();
+                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    } else {
+                        showSeekToast(`Kênh số ${channelNumberBuffer} không tồn tại`);
+                    }
+                    channelNumberBuffer = "";
+                }, 1000);
+                return;
+            }
+
+            // Hủy bộ đệm phím số nếu người dùng bấm bất kỳ phím nào khác (trừ Enter để xác nhận nhanh)
+            if (channelNumberBuffer !== "" && keyCode !== KEY_CODES.ENTER) {
+                clearTimeout(channelNumberTimeout);
+                channelNumberBuffer = "";
+            }
+
+            // Xác nhận nhanh bằng phím Enter khi có bộ đệm số
+            if (keyCode === KEY_CODES.ENTER && channelNumberBuffer !== "") {
+                e.preventDefault();
+                clearTimeout(channelNumberTimeout);
+                const targetChNum = parseInt(channelNumberBuffer, 10);
+                const chIndex = targetChNum - 1;
+                
+                if (chIndex >= 0 && chIndex < channels.length) {
+                    const targetCh = channels[chIndex];
+                    showSeekToast(`Đang chuyển đến kênh ${targetChNum}: ${targetCh.name}`);
+                    loadAndPlay(targetCh.url, targetCh.subtitle || targetCh.sub, targetCh.key || targetCh.drm);
+                    
+                    const card = document.querySelectorAll('.channel-card')[chIndex];
+                    if (card) {
+                        card.focus();
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                } else {
+                    showSeekToast(`Kênh số ${channelNumberBuffer} không tồn tại`);
+                }
+                channelNumberBuffer = "";
+                return;
+            }
+
+            // ========== 2. XỬ LÝ PHÍM LÊN/XUỐNG ĐỂ LƯỚT KÊNH KHI ẨN MENU ==========
+            if (isPlayerActive && !isModalActive) {
+                const isControlsHidden = controlsOverlay.classList.contains('hidden');
+                if (isControlsHidden && (keyCode === KEY_CODES.UP || keyCode === KEY_CODES.DOWN)) {
+                    e.preventDefault();
+                    resetTVIdleTimer();
+                    
+                    const currentUrl = currentVideoUrl;
+                    let currentIndex = channels.findIndex(ch => ch.url === currentUrl);
+                    if (currentIndex === -1) currentIndex = 0;
+                    
+                    let nextIndex;
+                    if (keyCode === KEY_CODES.UP) {
+                        nextIndex = (currentIndex + 1) % channels.length;
+                    } else {
+                        nextIndex = (currentIndex - 1 + channels.length) % channels.length;
+                    }
+                    
+                    const nextCh = channels[nextIndex];
+                    showSeekToast(`Đang chuyển đến: ${nextCh.name}`);
+                    loadAndPlay(nextCh.url, nextCh.subtitle || nextCh.sub, nextCh.key || nextCh.drm);
+                    
+                    // Đồng bộ tiêu điểm lưới kênh
+                    const card = document.querySelectorAll('.channel-card')[nextIndex];
+                    if (card) {
+                        card.focus();
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return;
+                }
+            }
+
             // Xử lý phím trong Settings Modal
             if (modal.classList.contains('active')) {
                 const isInputActive = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
@@ -2897,14 +3056,22 @@
             }
 
             if (activeElement.id === 'progress-area') {
-                if (keyCode === KEY_CODES.LEFT) {
+                if (keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT) {
                     e.preventDefault();
-                    video.currentTime = Math.max(0, video.currentTime - 10);
-                    return;
-                }
-                if (keyCode === KEY_CODES.RIGHT) {
-                    e.preventDefault();
-                    video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
+                    e.stopPropagation();
+                    resetTVIdleTimer();
+                    
+                    const seekAmount = video.duration && isFinite(video.duration) 
+                        ? Math.min(180, Math.max(10, Math.round(video.duration * 0.02))) 
+                        : 10;
+                        
+                    if (keyCode === KEY_CODES.LEFT) {
+                        video.currentTime = Math.max(0, video.currentTime - seekAmount);
+                        showSeekToast(`« Tua lại -${seekAmount}s (${formatTime(video.currentTime)})`);
+                    } else {
+                        video.currentTime = Math.min(video.duration || Infinity, video.currentTime + seekAmount);
+                        showSeekToast(`Tua đi +${seekAmount}s » (${formatTime(video.currentTime)})`);
+                    }
                     return;
                 }
             }
