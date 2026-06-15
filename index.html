@@ -810,6 +810,32 @@
             transform: scale(1.08);
             box-shadow: 0 0 15px var(--focus-color);
         }
+        .seek-toast {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 20px;
+            font-family: 'Outfit', 'Inter', sans-serif;
+            font-weight: bold;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .seek-toast.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -855,6 +881,7 @@
         <div class="loading-indicator" id="loading-indicator">
             <i class="fas fa-spinner fa-spin"></i> Đang tải luồng...
         </div>
+        <div class="seek-toast" id="seek-toast"></div>
         
         <div class="controls-overlay" id="controls-overlay">
 
@@ -1231,6 +1258,7 @@
         const pinOverlay = document.getElementById('pin-overlay');
         
         const loadingIndicator = document.getElementById('loading-indicator');
+        const seekToast = document.getElementById('seek-toast');
         
         const castToggleBtn = document.getElementById('cast-toggle-btn');
         const closeCastBtn = document.getElementById('close-cast-btn');
@@ -1548,9 +1576,11 @@
                     break;
                 case 'seekback':
                     video.currentTime = Math.max(0, video.currentTime - 10);
+                    showSeekToast("« Tua lại 10s");
                     break;
                 case 'seekforward':
                     video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
+                    showSeekToast("Tua đi 10s »");
                     break;
                 case 'stop':
                     video.pause();
@@ -1710,8 +1740,61 @@
         let lastPlaybackTime = 0;
         let isVideoLoading = false;
         let lastActiveElement = null;
+        let lastPositionSavedTime = 0;
+
+        function savePlaybackPosition() {
+            if (!currentVideoUrl) return;
+            const currentTime = video.currentTime;
+            
+            // Chỉ lưu khi đã phát được ít nhất 5 giây và không ở sát cuối video (trong vòng 10 giây cuối hoặc 98% thời lượng)
+            if (currentTime > 5 && video.duration && (video.duration - currentTime > 10) && (currentTime / video.duration < 0.98)) {
+                let positions = {};
+                try {
+                    positions = JSON.parse(localStorage.getItem('webtv_resume_positions') || '{}');
+                } catch(e) {
+                    positions = {};
+                }
+                positions[currentVideoUrl] = currentTime;
+                
+                // Giới hạn tối đa 100 bản ghi để tối ưu bộ nhớ
+                const keys = Object.keys(positions);
+                if (keys.length > 100) {
+                    delete positions[keys[0]]; // Xóa bản ghi cũ nhất
+                }
+                localStorage.setItem('webtv_resume_positions', JSON.stringify(positions));
+            } else if (video.duration && (video.duration - currentTime <= 10 || currentTime / video.duration >= 0.98)) {
+                // Nếu xem gần hết video, xóa vị trí đã lưu để lần sau xem lại từ đầu
+                clearPlaybackPosition(currentVideoUrl);
+            }
+        }
+        
+        function clearPlaybackPosition(url) {
+            if (!url) return;
+            let positions = {};
+            try {
+                positions = JSON.parse(localStorage.getItem('webtv_resume_positions') || '{}');
+            } catch(e) {
+                positions = {};
+            }
+            if (positions[url]) {
+                delete positions[url];
+                localStorage.setItem('webtv_resume_positions', JSON.stringify(positions));
+            }
+        }
+        
+        function getSavedPlaybackPosition(url) {
+            if (!url) return 0;
+            let positions = {};
+            try {
+                positions = JSON.parse(localStorage.getItem('webtv_resume_positions') || '{}');
+            } catch(e) {
+                positions = {};
+            }
+            return parseFloat(positions[url]) || 0;
+        }
 
         function destroyPlayersOnly() {
+            savePlaybackPosition();
             clearStallCheck();
             video.pause();
             
@@ -1898,6 +1981,7 @@
                 url = url.replace(/(https?:\/\/.[^/]+)\/\/+/g, '$1/');
             }
 
+            const savedPosition = getSavedPlaybackPosition(url);
             currentVideoUrl = url;
             loadingIndicator.classList.add('active');
             
@@ -1946,6 +2030,10 @@
                     
                     dashPlayer.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
                         loadingIndicator.classList.remove('active');
+                        if (savedPosition > 0) {
+                            video.currentTime = savedPosition;
+                            showSeekToast("Đang phát tiếp từ " + formatTime(savedPosition));
+                        }
                         updateQualityLevels();
                         startStallCheck();
                     });
@@ -1970,6 +2058,10 @@
                     hls.attachMedia(video);
                     
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        if (savedPosition > 0) {
+                            video.currentTime = savedPosition;
+                            showSeekToast("Đang phát tiếp từ " + formatTime(savedPosition));
+                        }
                         video.play().catch(e => console.log("Auto-play blocked: ", e));
                         loadingIndicator.classList.remove('active');
                         updateQualityLevels();
@@ -1998,6 +2090,10 @@
                     video.src = proxiedUrl;
                     video.load(); 
                     const onPlay = () => {
+                        if (savedPosition > 0) {
+                            video.currentTime = savedPosition;
+                            showSeekToast("Đang phát tiếp từ " + formatTime(savedPosition));
+                        }
                         video.play().catch(e => console.log("Auto-play blocked: ", e));
                         loadingIndicator.classList.remove('active');
                         startStallCheck();
@@ -2009,6 +2105,10 @@
                     video.src = proxiedUrl;
                     video.load();
                     const onPlay = () => {
+                        if (savedPosition > 0) {
+                            video.currentTime = savedPosition;
+                            showSeekToast("Đang phát tiếp từ " + formatTime(savedPosition));
+                        }
                         video.play().catch(e => console.log("Auto-play blocked: ", e));
                         loadingIndicator.classList.remove('active');
                         updateQualityLevels();
@@ -2304,6 +2404,12 @@
                 document.getElementById('progress-filled').style.width = (video.currentTime / video.duration) * 100 + '%';
                 document.getElementById('current-time').innerText = formatTime(video.currentTime);
                 document.getElementById('duration-time').innerText = formatTime(video.duration);
+                
+                const now = Date.now();
+                if (now - lastPositionSavedTime > 5000) {
+                    savePlaybackPosition();
+                    lastPositionSavedTime = now;
+                }
             }
         });
 
@@ -2607,6 +2713,17 @@
             }, 5000);
         }
 
+        let seekToastTimer = null;
+        function showSeekToast(text) {
+            if (!seekToast) return;
+            seekToast.innerText = text;
+            seekToast.classList.add('active');
+            if (seekToastTimer) clearTimeout(seekToastTimer);
+            seekToastTimer = setTimeout(() => {
+                seekToast.classList.remove('active');
+            }, 800);
+        }
+
         const KEY_CODES = {
             LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40,
             PLAY_PAUSE: 179, PLAY: 415, PAUSE: 19, STOP: 413,
@@ -2641,13 +2758,57 @@
             const isDirectionKey = keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT || 
                                    keyCode === KEY_CODES.UP || keyCode === KEY_CODES.DOWN;
 
+            const isSeekingKey = keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT;
+            const isPlayerActive = wrapper && wrapper.classList.contains('active');
+            const isModalActive = modal.classList.contains('active') || castModal.classList.contains('active') || pinOverlay.style.display !== 'none';
+
             if (isDirectionKey) {
-                const now = Date.now();
-                if (now - lastNavTime < NAV_COOLDOWN) {
+                // Tua video không bị giới hạn bởi NAV_COOLDOWN để tăng phản hồi mượt mà
+                const isPlayerSeek = isPlayerActive && !isModalActive && isSeekingKey && 
+                    (controlsOverlay.classList.contains('hidden') || 
+                     !activeElement || 
+                     (!activeElement.classList.contains('btn') && 
+                      activeElement.tagName !== 'BUTTON' && 
+                      activeElement.id !== 'settings-toggle' && 
+                      activeElement.id !== 'cast-toggle-btn' && 
+                      activeElement.id !== 'mute-btn' && 
+                      activeElement.id !== 'play-pause-btn'));
+
+                if (!isPlayerSeek) {
+                    const now = Date.now();
+                    if (now - lastNavTime < NAV_COOLDOWN) {
+                        e.preventDefault();
+                        return;
+                    }
+                    lastNavTime = now;
+                }
+            }
+
+            // Xử lý tua nhanh/tua lui 10s khi ở chế độ player và không mở modal
+            if (isPlayerActive && !isModalActive && isSeekingKey) {
+                const isControlsHidden = controlsOverlay.classList.contains('hidden');
+                const isNavigatingButtons = activeElement && 
+                    (activeElement.tagName === 'BUTTON' || 
+                     activeElement.classList.contains('btn') || 
+                     activeElement.classList.contains('settings-toggle-btn') || 
+                     activeElement.id === 'settings-toggle' || 
+                     activeElement.id === 'cast-toggle-btn' || 
+                     activeElement.id === 'mute-btn' || 
+                     activeElement.id === 'play-pause-btn');
+
+                if (isControlsHidden || !isNavigatingButtons) {
                     e.preventDefault();
+                    resetTVIdleTimer();
+                    const seekAmount = 10;
+                    if (keyCode === KEY_CODES.LEFT) {
+                        video.currentTime = Math.max(0, video.currentTime - seekAmount);
+                        showSeekToast("« Tua lại 10s");
+                    } else {
+                        video.currentTime = Math.min(video.duration || Infinity, video.currentTime + seekAmount);
+                        showSeekToast("Tua đi 10s »");
+                    }
                     return;
                 }
-                lastNavTime = now;
             }
 
             // Xử lý phím cho PIN Overlay
