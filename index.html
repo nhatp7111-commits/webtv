@@ -1240,6 +1240,8 @@
             
             console.log(`[WebTV] Đang tải danh sách kênh chống cache...`);
             let response;
+            let fetchSuccess = false;
+            
             try {
                 // Lớp 2: Thiết lập cache: 'no-store'
                 response = await fetch(url, { 
@@ -1247,18 +1249,22 @@
                     headers: headers,
                     cache: 'no-store'
                 });
+                fetchSuccess = true;
             } catch (fetchErr) {
+                console.warn("Lỗi kết nối khi fetch:", fetchErr);
                 if (useToken) {
-                    console.warn("Lỗi kết nối khi dùng Token. Chuyển sang tải công khai không Token...");
+                    console.warn("Chuyển sang tải công khai không Token...");
                     useToken = false;
                 } else {
                     throw fetchErr;
                 }
             }
 
-            // TỰ PHỤC HỒI: Nếu dùng Token bị lỗi xác thực hoặc giới hạn (401/403), tải lại không dùng Token
-            if (useToken && (response.status === 401 || response.status === 403)) {
-                console.warn(`Token lỗi hoặc hết hạn (HTTP ${response.status}). Đang tự phục hồi bằng link công khai...`);
+            // TỰ PHỤC HỒI:
+            // TH1: Lỗi kết nối khi dùng token (fetchSuccess === false và useToken đã chuyển thành false)
+            // TH2: Fetch thành công nhưng token bị lỗi xác thực hoặc giới hạn (401/403)
+            if (!fetchSuccess || (useToken && (response.status === 401 || response.status === 403))) {
+                console.warn(`Đang tự phục hồi bằng link công khai...`);
                 const publicUrl = CHANNELS_JSON_URL + (CHANNELS_JSON_URL.includes('?') ? '&' : '?') + antiCacheParams;
                 const publicHeaders = {
                     'Cache-Control': 'no-cache, no-store, must-revalidate',
