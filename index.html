@@ -985,6 +985,16 @@
             </select>
         </div>
 
+        <div class="setting-group">
+            <label>VỊ TRÍ PHỤ ĐỀ (CHIỀU CAO SO VỚI ĐÁY)</label>
+            <select id="sub-position-select" tabindex="0" class="focusable">
+                <option value="70">Rất cao (Tránh đè thanh điều khiển)</option>
+                <option value="78">Cao (Thoải mái cho mắt)</option>
+                <option value="85" selected>Vừa phải (Khuyên dùng)</option>
+                <option value="93">Thấp (Sát đáy màn hình)</option>
+            </select>
+        </div>
+
         <button class="btn focusable" id="close-modal-btn" tabindex="0" style="width: 100%; background: #444; margin-top: 15px;">ĐÓNG</button>
     </div>
 </div>
@@ -1237,6 +1247,7 @@
         const subSizeSelect = document.getElementById('sub-size-select');
         const subShadowSelect = document.getElementById('sub-shadow-select');
         const subBgSelect = document.getElementById('sub-bg-select');
+        const subPositionSelect = document.getElementById('sub-position-select');
         const corsProxySelect = document.getElementById('cors-proxy-select');
         const githubTokenInput = document.getElementById('github-token-input');
 
@@ -2022,6 +2033,20 @@
             return vtt;
         }
 
+        function applySubtitlePosition(position) {
+            const track = video.textTracks && video.textTracks[0];
+            if (track) {
+                const cues = track.cues;
+                if (cues) {
+                    for (let i = 0; i < cues.length; i++) {
+                        const cue = cues[i];
+                        cue.snapToLines = false;
+                        cue.line = position;
+                    }
+                }
+            }
+        }
+
         // Gắn phụ đề vào thẻ video
         function addSubtitleTrack(src) {
             const track = document.createElement('track');
@@ -2035,7 +2060,25 @@
             // Kích hoạt hiển thị phụ đề sau khi gắn
             setTimeout(() => {
                 if (video.textTracks && video.textTracks[0]) {
-                    video.textTracks[0].mode = 'showing';
+                    const textTrack = video.textTracks[0];
+                    textTrack.mode = 'showing';
+                    
+                    // Lắng nghe sự kiện cuechange để thay đổi vị trí phụ đề động
+                    textTrack.oncuechange = function() {
+                        const position = parseInt(localStorage.getItem('sub_position')) || 85;
+                        const activeCues = this.activeCues;
+                        if (activeCues) {
+                            for (let i = 0; i < activeCues.length; i++) {
+                                const cue = activeCues[i];
+                                cue.snapToLines = false;
+                                cue.line = position;
+                            }
+                        }
+                    };
+                    
+                    // Áp dụng luôn cho toàn bộ cue đã load
+                    const position = parseInt(localStorage.getItem('sub_position')) || 85;
+                    applySubtitlePosition(position);
                 }
             }, 500);
         }
@@ -2047,14 +2090,17 @@
             const bg = localStorage.getItem('sub_bg') || 'transparent';
             const font = localStorage.getItem('sub_font') || "'Outfit', 'Inter', sans-serif";
             const shadow = localStorage.getItem('sub_shadow') || "2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)";
+            const position = localStorage.getItem('sub_position') || '85';
 
             subSizeSelect.value = size;
             subColorSelect.value = color;
             subBgSelect.value = bg;
             if (subFontSelect) subFontSelect.value = font;
             if (subShadowSelect) subShadowSelect.value = shadow;
+            if (subPositionSelect) subPositionSelect.value = position;
 
             applySubtitleSettings(size, color, bg, font, shadow);
+            applySubtitlePosition(parseInt(position));
             loadCorsProxySettings();
             loadGithubTokenSettings();
         }
@@ -2073,7 +2119,8 @@
                 color: subColorSelect.value,
                 bg: subBgSelect.value,
                 font: subFontSelect ? subFontSelect.value : "'Outfit', 'Inter', sans-serif",
-                shadow: subShadowSelect ? subShadowSelect.value : "2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)"
+                shadow: subShadowSelect ? subShadowSelect.value : "2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)",
+                position: subPositionSelect ? subPositionSelect.value : '85'
             };
         }
 
@@ -2084,7 +2131,9 @@
             localStorage.setItem('sub_bg', settings.bg);
             localStorage.setItem('sub_font', settings.font);
             localStorage.setItem('sub_shadow', settings.shadow);
+            localStorage.setItem('sub_position', settings.position);
             applySubtitleSettings(settings.size, settings.color, settings.bg, settings.font, settings.shadow);
+            applySubtitlePosition(parseInt(settings.position));
         }
 
         subColorSelect.onchange = saveAndApplySubtitleSettings;
@@ -2092,6 +2141,7 @@
         subBgSelect.onchange = saveAndApplySubtitleSettings;
         if (subFontSelect) subFontSelect.onchange = saveAndApplySubtitleSettings;
         if (subShadowSelect) subShadowSelect.onchange = saveAndApplySubtitleSettings;
+        if (subPositionSelect) subPositionSelect.onchange = saveAndApplySubtitleSettings;
 
         // 5.1 CẤU HÌNH CORS PROXY VÀ VƯỢT CƠ CHẾ CORS
         function loadCorsProxySettings() {
