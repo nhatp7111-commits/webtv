@@ -1208,7 +1208,7 @@
         return false;
     }
 
-    // Hàm tải danh sách kênh động từ GitHub (Phiên bản nâng cấp chống Cache & Tự phục hồi)
+    // Hàm tải danh sách kênh động từ GitHub (Phiên bản nâng cấp chống Cache, CORS-safe & Tự phục hồi)
     async function fetchDynamicChannels(pin) {
         if (cachedEncryptedData && pin) {
             return decryptAndLoad(cachedEncryptedData, pin);
@@ -1221,13 +1221,7 @@
             const token = localStorage.getItem('github_token') || '';
             const antiCacheParams = `_ts=${Date.now()}&_r=${Math.random().toString(36).substring(2, 10)}`;
             
-            // Lớp 3: Định nghĩa headers chống cache mặc định
-            const headers = {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-            };
-            
+            const headers = {};
             let useToken = !!token;
             let url = CHANNELS_JSON_URL + (CHANNELS_JSON_URL.includes('?') ? '&' : '?') + antiCacheParams;
             
@@ -1238,12 +1232,12 @@
                 url = apiUrl + (apiUrl.includes('?') ? '&' : '?') + antiCacheParams;
             }
             
-            console.log(`[WebTV] Đang tải danh sách kênh chống cache...`);
+            console.log(`[WebTV] Đang tải danh sách kênh chống cache (CORS-safe)...`);
             let response;
             let fetchSuccess = false;
             
             try {
-                // Lớp 2: Thiết lập cache: 'no-store'
+                // Lớp 2: Thiết lập cache: 'no-store' (CORS-safe)
                 response = await fetch(url, { 
                     signal: controller.signal,
                     headers: headers,
@@ -1266,14 +1260,8 @@
             if (!fetchSuccess || (useToken && (response.status === 401 || response.status === 403))) {
                 console.warn(`Đang tự phục hồi bằng link công khai...`);
                 const publicUrl = CHANNELS_JSON_URL + (CHANNELS_JSON_URL.includes('?') ? '&' : '?') + antiCacheParams;
-                const publicHeaders = {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                };
                 response = await fetch(publicUrl, {
                     signal: controller.signal,
-                    headers: publicHeaders,
                     cache: 'no-store'
                 });
             }
