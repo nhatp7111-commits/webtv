@@ -336,57 +336,6 @@
             font-family: 'Outfit', sans-serif;
         }
 
-        /* --- TOAST CHUYỂN KÊNH TRỰC TIẾP (ZAPPING TOAST) --- */
-        .zap-toast {
-            position: absolute;
-            top: 40px;
-            right: 40px;
-            background: rgba(15, 15, 20, 0.9);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 15px 25px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: 2200;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
-        }
-        .zap-toast.active {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .zap-logo {
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
-            object-fit: contain;
-            background: #111;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .zap-info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .zap-title {
-            color: var(--focus-color);
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-family: 'Outfit', sans-serif;
-        }
-        .zap-ch-name {
-            color: #fff;
-            font-size: 20px;
-            font-weight: 800;
-            font-family: 'Outfit', sans-serif;
-        }
 
         /* --- MODAL CÀI ĐẶT --- */
         .settings-modal-overlay {
@@ -1107,14 +1056,6 @@
         </div>
 
         <!-- Toast chuyển kênh nhanh (Zapping) -->
-        <div class="zap-toast" id="zap-toast">
-            <img class="zap-logo" id="zap-logo" src="" alt="">
-            <div class="zap-info">
-                <div class="zap-title">ĐANG CHUYỂN KÊNH</div>
-                <div class="zap-ch-name" id="zap-ch-name">Kênh</div>
-            </div>
-        </div>
-        
         <div class="controls-overlay" id="controls-overlay">
 
 
@@ -1127,6 +1068,7 @@
                     <button class="btn focusable" id="play-pause-btn" tabindex="0"><i class="fas fa-pause"></i></button>
                     <button class="btn focusable" id="mute-btn" tabindex="0"><i class="fas fa-volume-up"></i></button>
                     <button class="btn focusable" id="cast-toggle-btn" tabindex="0" title="PLAYER LINK"><i class="fas fa-tv"></i> PLAYER LINK</button>
+                    <button class="btn focusable" id="sidebar-toggle-btn" tabindex="0" title="Danh Sách Kênh" style="font-weight: bold;"><i class="fas fa-list-ul"></i> DANH SÁCH KÊNH</button>
                     <div class="time-display" style="margin-left: 5px;">
                         <span id="current-time">0:00</span> / <span id="duration-time">0:00</span>
                     </div>
@@ -1275,8 +1217,8 @@
             Bạn có chắc chắn muốn thoát ứng dụng WebTV không?
         </p>
         <div style="display: flex; gap: 15px; justify-content: center;">
-            <button class="btn focusable" id="exit-cancel-btn" tabindex="0" style="flex: 1; background: var(--primary-red); color: white;">HỦY</button>
-            <button class="btn focusable" id="exit-confirm-btn" tabindex="0" style="flex: 1; background: #444; color: white;">ĐỒNG Ý</button>
+            <button class="btn focusable" id="exit-cancel-btn" tabindex="0" style="flex: 1; background: #444; color: white;">HỦY</button>
+            <button class="btn focusable" id="exit-confirm-btn" tabindex="0" style="flex: 1; background: var(--primary-red); color: white;">ĐỒNG Ý</button>
         </div>
     </div>
 </div>
@@ -1590,17 +1532,13 @@
         
         const loadingIndicator = document.getElementById('loading-indicator');
 
-        // Sidebar & Zap Toast
+        // Sidebar
         const channelSidebar = document.getElementById('channel-sidebar');
         const sidebarList = document.getElementById('sidebar-list');
-        const zapToast = document.getElementById('zap-toast');
-        const zapLogo = document.getElementById('zap-logo');
-        const zapChName = document.getElementById('zap-ch-name');
+        const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
 
         let isSidebarOpen = false;
         let sidebarAutoCloseTimeout = null;
-        let zapDebounceTimeout = null;
-        let zapTargetIndex = -1;
         const seekToast = document.getElementById('seek-toast');
         
         const castToggleBtn = document.getElementById('cast-toggle-btn');
@@ -2798,8 +2736,11 @@
             });
         }
 
+        let lastSidebarOpenedFrom = null;
+
         function openChannelSidebar() {
             if (isSidebarOpen) return;
+            lastSidebarOpenedFrom = document.activeElement;
             isSidebarOpen = true;
             channelSidebar.classList.add('active');
             renderSidebarChannels();
@@ -2831,7 +2772,14 @@
                 clearTimeout(sidebarAutoCloseTimeout);
                 sidebarAutoCloseTimeout = null;
             }
-            video.focus();
+            if (lastSidebarOpenedFrom && lastSidebarOpenedFrom.isConnected) {
+                lastSidebarOpenedFrom.focus();
+            } else if (sidebarToggleBtn) {
+                sidebarToggleBtn.focus();
+            } else {
+                video.focus();
+            }
+            lastSidebarOpenedFrom = null;
         }
 
         function resetSidebarAutoCloseTimer() {
@@ -2843,48 +2791,11 @@
             }, 5000);
         }
 
-        function zapChannel(direction) {
-            if (!channels || channels.length === 0) return;
-            
-            let currentIndex = 0;
-            if (currentVideoUrl) {
-                const foundIdx = channels.findIndex(ch => ch.url === currentVideoUrl);
-                if (foundIdx !== -1) currentIndex = foundIdx;
-            }
-            
-            if (zapTargetIndex === -1) {
-                zapTargetIndex = currentIndex;
-            }
-            
-            zapTargetIndex += direction;
-            if (zapTargetIndex >= channels.length) {
-                zapTargetIndex = 0;
-            } else if (zapTargetIndex < 0) {
-                zapTargetIndex = channels.length - 1;
-            }
-            
-            const targetChannel = channels[zapTargetIndex];
-            
-            zapLogo.src = targetChannel.logo;
-            zapChName.innerText = targetChannel.name;
-            zapToast.classList.add('active');
-            
-            if (zapDebounceTimeout) {
-                clearTimeout(zapDebounceTimeout);
-            }
-            
-            zapDebounceTimeout = setTimeout(() => {
-                zapTargetIndex = -1;
-                zapToast.classList.remove('active');
-                loadAndPlay(targetChannel.url, targetChannel.subtitle || targetChannel.sub, targetChannel.key || targetChannel.drm);
-            }, 1200);
-        }
-
         function openExitModal() {
             lastExitModalOpenedFrom = document.activeElement;
             exitModal.classList.add('active');
             isCacheValid = false;
-            exitCancelBtn.focus();
+            exitConfirmBtn.focus();
         }
 
         function closeExitModal() {
@@ -2948,6 +2859,9 @@
 
         exitCancelBtn.onclick = () => closeExitModal();
         exitConfirmBtn.onclick = () => exitTVApp();
+        if (sidebarToggleBtn) {
+            sidebarToggleBtn.onclick = () => openChannelSidebar();
+        }
 
         function openSettingsModal(triggerElement) {
             lastModalOpenedFrom = triggerElement;
@@ -3297,33 +3211,11 @@
                 if (isSidebarOpen) {
                     resetSidebarAutoCloseTimer();
                     if (keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || 
-                        keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE ||
-                        keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT) {
+                        keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE) {
                         e.preventDefault();
                         e.stopPropagation();
                         closeChannelSidebar();
                         return;
-                    }
-                } else {
-                    // Sidebar đang đóng
-                    // 1. Phím UP/DOWN -> Chuyển kênh trực tiếp (Classic Zapping)
-                    if (keyCode === KEY_CODES.UP || keyCode === KEY_CODES.DOWN) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        zapChannel(keyCode === KEY_CODES.UP ? 1 : -1);
-                        return;
-                    }
-                    
-                    // 2. Phím LEFT/RIGHT -> Mở Sidebar duyệt kênh (trừ khi đang ở thanh progress hoặc thẻ select)
-                    const isFocusOnSelect = activeElement && activeElement.tagName === 'SELECT';
-                    const isFocusOnProgress = activeElement && activeElement.id === 'progress-area';
-                    if (!isFocusOnSelect && !isFocusOnProgress) {
-                        if (keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openChannelSidebar();
-                            return;
-                        }
                     }
                 }
             }
@@ -3704,7 +3596,6 @@
             const castModalOverlay = document.getElementById('cast-modal-overlay');
             const exitModalOverlay = document.getElementById('exit-modal-overlay');
             const channelSidebar = document.getElementById('channel-sidebar');
-            const zapToast = document.getElementById('zap-toast');
             
             const fsElement = document.fullscreenElement || 
                               document.webkitFullscreenElement || 
@@ -3717,14 +3608,12 @@
                     if (castModalOverlay) playerWrapper.appendChild(castModalOverlay);
                     if (exitModalOverlay) playerWrapper.appendChild(exitModalOverlay);
                     if (channelSidebar) playerWrapper.appendChild(channelSidebar);
-                    if (zapToast) playerWrapper.appendChild(zapToast);
                 }
             } else {
                 if (settingsModalOverlay) document.body.appendChild(settingsModalOverlay);
                 if (castModalOverlay) document.body.appendChild(castModalOverlay);
                 if (exitModalOverlay) document.body.appendChild(exitModalOverlay);
                 if (channelSidebar) document.body.appendChild(channelSidebar);
-                if (zapToast) document.body.appendChild(zapToast);
             }
             isCacheValid = false;
         };
