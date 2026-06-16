@@ -1115,6 +1115,20 @@
     </div>
 </div>
 
+<!-- Modal Xác nhận Thoát Ứng dụng -->
+<div class="settings-modal-overlay" id="exit-modal-overlay">
+    <div class="settings-modal" style="text-align: center; width: 450px;">
+        <h3 style="margin-bottom: 20px;"><i class="fas fa-sign-out-alt"></i> Thoát Ứng Dụng</h3>
+        <p style="font-size: 18px; color: #ccc; margin-bottom: 25px; line-height: 1.4;">
+            Bạn có chắc chắn muốn thoát ứng dụng WebTV không?
+        </p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button class="btn focusable" id="exit-cancel-btn" tabindex="0" style="flex: 1; background: var(--primary-red); color: white;">HỦY</button>
+            <button class="btn focusable" id="exit-confirm-btn" tabindex="0" style="flex: 1; background: #444; color: white;">ĐỒNG Ý</button>
+        </div>
+    </div>
+</div>
+
 <!-- CHẾ ĐỘ ĐIỀU KHIỂN TRÊN ĐIỆN THOẠI (REMOTE MODE) -->
 <div id="app-remote" style="display: none;">
     <div class="remote-card">
@@ -1416,7 +1430,11 @@
         // Modals
         const modal = document.getElementById('settings-modal-overlay');
         const castModal = document.getElementById('cast-modal-overlay');
+        const exitModal = document.getElementById('exit-modal-overlay');
         const pinOverlay = document.getElementById('pin-overlay');
+        
+        const exitCancelBtn = document.getElementById('exit-cancel-btn');
+        const exitConfirmBtn = document.getElementById('exit-confirm-btn');
         
         const loadingIndicator = document.getElementById('loading-indicator');
         const seekToast = document.getElementById('seek-toast');
@@ -2588,6 +2606,74 @@
         progressArea.addEventListener('touchmove', handleProgressPointer, { passive: true });
 
         let lastModalOpenedFrom = null;
+        let lastExitModalOpenedFrom = null;
+
+        function openExitModal() {
+            lastExitModalOpenedFrom = document.activeElement;
+            exitModal.classList.add('active');
+            isCacheValid = false;
+            exitCancelBtn.focus();
+        }
+
+        function closeExitModal() {
+            exitModal.classList.remove('active');
+            isCacheValid = false;
+            if (lastExitModalOpenedFrom && lastExitModalOpenedFrom.isConnected) {
+                lastExitModalOpenedFrom.focus();
+            } else {
+                const firstCard = document.querySelector('.channel-card');
+                if (firstCard) firstCard.focus();
+            }
+            lastExitModalOpenedFrom = null;
+        }
+
+        function exitTVApp() {
+            if (typeof tizen !== 'undefined' && tizen.application) {
+                try {
+                    tizen.application.getCurrentApplication().exit();
+                } catch (e) {
+                    window.close();
+                }
+            } else if (typeof webOS !== 'undefined' && webOS.window) {
+                try {
+                    webOS.window.close();
+                } catch (e) {
+                    window.close();
+                }
+            } else {
+                window.close();
+                setTimeout(() => {
+                    if (!window.closed) {
+                        window.history.go(-1);
+                        setTimeout(() => {
+                            if (!window.closed) {
+                                window.location.href = 'about:blank';
+                            }
+                        }, 100);
+                    }
+                }, 100);
+            }
+        }
+
+        function handleTVBackAction() {
+            if (modal.classList.contains('active')) {
+                closeSettingsModal();
+            } else if (castModal.classList.contains('active')) {
+                closeCastModal();
+            } else if (exitModal.classList.contains('active')) {
+                closeExitModal();
+            } else {
+                const isPlayerActive = wrapper && wrapper.classList.contains('active');
+                if (isPlayerActive) {
+                    destroyPlayers();
+                } else {
+                    openExitModal();
+                }
+            }
+        }
+
+        exitCancelBtn.onclick = () => closeExitModal();
+        exitConfirmBtn.onclick = () => exitTVApp();
 
         function openSettingsModal(triggerElement) {
             lastModalOpenedFrom = triggerElement;
@@ -2731,6 +2817,13 @@
         function getFocusableElementsRaw() {
             if (pinOverlay.style.display !== 'none') {
                 return Array.from(pinOverlay.querySelectorAll('.focusable')).filter(el => {
+                    const style = window.getComputedStyle(el);
+                    return style.display !== 'none' && style.visibility !== 'hidden';
+                });
+            }
+
+            if (exitModal && exitModal.classList.contains('active')) {
+                return Array.from(exitModal.querySelectorAll('.focusable')).filter(el => {
                     const style = window.getComputedStyle(el);
                     return style.display !== 'none' && style.visibility !== 'hidden';
                 });
@@ -3229,12 +3322,8 @@
                 case KEY_CODES.BACK_ANDROID:
                 case KEY_CODES.ESCAPE:
                     e.preventDefault();
-                    const playerWrapper = document.getElementById('player-wrapper');
-                    if (playerWrapper && playerWrapper.classList.contains('active')) {
-                        destroyPlayers();
-                    } else if (document.fullscreenElement) {
-                        document.exitFullscreen().catch(() => {});
-                    }
+                    e.stopPropagation();
+                    handleTVBackAction();
                     return;
                 case KEY_CODES.GUIDE:
                     e.preventDefault();
@@ -3293,6 +3382,7 @@
             const playerWrapper = document.getElementById('player-wrapper');
             const settingsModalOverlay = document.getElementById('settings-modal-overlay');
             const castModalOverlay = document.getElementById('cast-modal-overlay');
+            const exitModalOverlay = document.getElementById('exit-modal-overlay');
             
             const fsElement = document.fullscreenElement || 
                               document.webkitFullscreenElement || 
@@ -3303,10 +3393,12 @@
                 if (playerWrapper) {
                     if (settingsModalOverlay) playerWrapper.appendChild(settingsModalOverlay);
                     if (castModalOverlay) playerWrapper.appendChild(castModalOverlay);
+                    if (exitModalOverlay) playerWrapper.appendChild(exitModalOverlay);
                 }
             } else {
                 if (settingsModalOverlay) document.body.appendChild(settingsModalOverlay);
                 if (castModalOverlay) document.body.appendChild(castModalOverlay);
+                if (exitModalOverlay) document.body.appendChild(exitModalOverlay);
             }
             isCacheValid = false;
         };
@@ -3318,6 +3410,17 @@
 
         // Khởi chạy hệ thống trên Tivi
         async function initTVApp() {
+            // Thiết lập History trap chặn phím Back vật lý trình duyệt
+            try {
+                history.pushState({ page: 'home' }, '', window.location.href);
+                window.addEventListener('popstate', (e) => {
+                    history.pushState({ page: 'home' }, '', window.location.href);
+                    handleTVBackAction();
+                });
+            } catch (e) {
+                console.error("History trap error: ", e);
+            }
+
             registerTVKeys();
             loadSubtitleSettings();
             
