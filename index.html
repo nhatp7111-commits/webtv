@@ -336,6 +336,45 @@
             font-family: 'Outfit', sans-serif;
         }
 
+        /* --- SỐ THỨ TỰ KÊNH (CHANNEL NUMBERING) --- */
+        .ch-number-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(15, 15, 20, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: var(--focus-color);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 800;
+            font-family: 'Outfit', sans-serif;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+        }
+        .channel-card:focus .ch-number-badge, .channel-card.focused .ch-number-badge {
+            background: #000;
+            color: var(--focus-color);
+            border-color: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+        }
+
+        .sidebar-num {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--focus-color);
+            min-width: 25px;
+            text-align: center;
+            font-family: 'Outfit', sans-serif;
+            transition: color 0.2s ease;
+        }
+        .sidebar-item:focus .sidebar-num, .sidebar-item.focused .sidebar-num {
+            color: #000 !important;
+        }
+
 
         /* --- MODAL CÀI ĐẶT --- */
         .settings-modal-overlay {
@@ -1919,6 +1958,8 @@
             }
 
             list.forEach(ch => {
+                const globalIdx = channels.indexOf(ch);
+                const chNumber = globalIdx !== -1 ? globalIdx + 1 : 1;
                 const card = document.createElement('div');
                 const isMovie = ch.category === "Phim ảnh";
                 card.className = `channel-card focusable ${isMovie ? 'movie-card' : 'tv-card'}`;
@@ -1927,6 +1968,7 @@
                 card.innerHTML = `
                     <div class="img-container">
                         <img src="${ch.logo}" alt="${ch.name}">
+                        <div class="ch-number-badge">${chNumber}</div>
                     </div>
                     <div class="ch-name">${ch.name}</div>
                 `;
@@ -2725,6 +2767,7 @@
                 item.tabIndex = 0;
                 item.dataset.index = idx;
                 item.innerHTML = `
+                    <div class="sidebar-num">${idx + 1}</div>
                     <img class="sidebar-logo" src="${ch.logo}" alt="${ch.name}" onerror="this.src='placeholder.png';">
                     <div class="sidebar-name">${ch.name}</div>
                 `;
