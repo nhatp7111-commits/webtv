@@ -22,7 +22,7 @@
             --primary-red: #e50914;
             /* Cài đặt biến phụ đề mặc định */
             --sub-color: #ffeb3b;
-            --sub-size: 48px;
+            --sub-size: 65px;
             --sub-bg: transparent;
             --sub-font: 'Outfit', 'Inter', sans-serif;
             --sub-shadow: 2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8);
@@ -101,7 +101,7 @@
         /* --- CUSTOM STYLE CHO CUE PHỤ ĐỀ (NATIVE TRÊN TV) --- */
         video::cue {
             color: var(--sub-color, #ffeb3b) !important;
-            font-size: var(--sub-size, 48px) !important;
+            font-size: var(--sub-size, 65px) !important;
             background-color: var(--sub-bg, transparent) !important;
             font-family: var(--sub-font, 'Outfit', 'Inter', sans-serif) !important;
             text-shadow: var(--sub-shadow, 2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)) !important;
@@ -1262,7 +1262,7 @@
             <label>KÍCH THƯỚC CHỮ</label>
             <div class="subtitle-size-control">
                 <button id="sub-size-dec-btn" class="focusable setting-btn" tabindex="0">-</button>
-                <span id="sub-size-display">48px</span>
+                <span id="sub-size-display">65px</span>
                 <button id="sub-size-inc-btn" class="focusable setting-btn" tabindex="0">+</button>
             </div>
         </div>
@@ -2029,6 +2029,7 @@
                 card.className = `channel-card focusable ${isMovie ? 'movie-card' : 'tv-card'}`;
                 card.tabIndex = 0;
                 card.dataset.url = ch.url;
+                card.dataset.globalIndex = globalIdx;
                 card.innerHTML = `
                     <div class="img-container">
                         <img src="${ch.logo}" alt="${ch.name}">
@@ -2552,9 +2553,45 @@
             }, 500);
         }
 
+        function focusChannelByGlobalIndex(chIndex) {
+            const targetCh = channels[chIndex];
+            if (!targetCh) return;
+
+            // Tìm danh mục của kênh
+            const cat = targetCh.category || "Khác";
+
+            // Kích hoạt tab danh mục tương ứng
+            const tabBtns = document.querySelectorAll('.tv-tab-btn');
+            let matchedTab = null;
+            tabBtns.forEach(btn => {
+                if (btn.innerText.trim().toUpperCase() === cat.trim().toUpperCase()) {
+                    matchedTab = btn;
+                }
+            });
+
+            // Nếu không tìm thấy tab cụ thể, dùng tab đầu tiên (thường là "Tất cả")
+            if (!matchedTab && tabBtns.length > 0) {
+                matchedTab = tabBtns[0];
+            }
+
+            if (matchedTab) {
+                matchedTab.click(); // Gọi click để kích hoạt tab và render lại lưới kênh
+            }
+
+            // Đợi một khoảng thời gian ngắn để DOM render xong lưới kênh
+            setTimeout(() => {
+                const card = document.querySelector(`.channel-card[data-global-index="${chIndex}"]`);
+                if (card) {
+                    card.focus();
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    showSeekToast(`Đã chọn kênh ${chIndex + 1}: ${targetCh.name}`);
+                }
+            }, 100);
+        }
+
         // 5. CẤU HÌNH & LƯU TRỮ TINH CHỈNH PHỤ ĐỀ
         let activeSubColor = '#ffeb3b';
-        let activeSubSize = '48px';
+        let activeSubSize = '65px';
 
         function updateSubSizeUI() {
             const sizeDisplay = document.getElementById('sub-size-display');
@@ -2613,7 +2650,7 @@
         }
 
         function loadSubtitleSettings() {
-            activeSubSize = localStorage.getItem('sub_size') || '48px';
+            activeSubSize = localStorage.getItem('sub_size') || '65px';
             activeSubColor = localStorage.getItem('sub_color') || '#ffeb3b';
             const bg = localStorage.getItem('sub_bg') || 'transparent';
             const font = localStorage.getItem('sub_font') || "'Outfit', 'Inter', sans-serif";
@@ -3506,14 +3543,11 @@
                     
                     if (chIndex >= 0 && chIndex < channels.length) {
                         const targetCh = channels[chIndex];
-                        showSeekToast(`Đang chuyển đến kênh ${targetChNum}: ${targetCh.name}`);
-                        loadAndPlay(targetCh.url, targetCh.subtitle || targetCh.sub, targetCh.key || targetCh.drm);
-                        
-                        // Đồng bộ tiêu điểm lưới kênh
-                        const card = document.querySelectorAll('.channel-card')[chIndex];
-                        if (card) {
-                            card.focus();
-                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        if (isPlayerActive && !isModalActive) {
+                            showSeekToast(`Đang chuyển đến kênh ${targetChNum}: ${targetCh.name}`);
+                            loadAndPlay(targetCh.url, targetCh.subtitle || targetCh.sub, targetCh.key || targetCh.drm);
+                        } else {
+                            focusChannelByGlobalIndex(chIndex);
                         }
                     } else {
                         showSeekToast(`Kênh số ${channelNumberBuffer} không tồn tại`);
