@@ -21,9 +21,9 @@
             --modal-bg: #1e1e1e;
             --primary-red: #e50914;
             /* Cài đặt biến phụ đề mặc định */
-            --sub-color: #ffffff;
-            --sub-size: 32px;
-            --sub-bg: rgba(0, 0, 0, 0.6);
+            --sub-color: #ffeb3b;
+            --sub-size: 48px;
+            --sub-bg: transparent;
             --sub-font: 'Outfit', 'Inter', sans-serif;
             --sub-shadow: 2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8);
         }
@@ -100,9 +100,9 @@
 
         /* --- CUSTOM STYLE CHO CUE PHỤ ĐỀ (NATIVE TRÊN TV) --- */
         video::cue {
-            color: var(--sub-color, #ffffff) !important;
-            font-size: var(--sub-size, 32px) !important;
-            background-color: var(--sub-bg, rgba(0,0,0,0.6)) !important;
+            color: var(--sub-color, #ffeb3b) !important;
+            font-size: var(--sub-size, 48px) !important;
+            background-color: var(--sub-bg, transparent) !important;
             font-family: var(--sub-font, 'Outfit', 'Inter', sans-serif) !important;
             text-shadow: var(--sub-shadow, 2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)) !important;
         }
@@ -1174,8 +1174,8 @@
         <div class="setting-group">
             <label>MÀU SẮC CHỮ</label>
             <select id="sub-color-select" tabindex="0" class="focusable">
-                <option value="#ffffff" selected>Trắng tinh khôi</option>
-                <option value="#ffeb3b">Vàng ấm áp (Netflix)</option>
+                <option value="#ffffff">Trắng tinh khôi</option>
+                <option value="#ffeb3b" selected>Vàng ấm áp (Netflix)</option>
                 <option value="#00ff00">Xanh lục dịu mắt</option>
                 <option value="#00e5ff">Xanh ngọc hiện đại</option>
             </select>
@@ -1195,9 +1195,9 @@
             <label>KÍCH THƯỚC CHỮ</label>
             <select id="sub-size-select" tabindex="0" class="focusable">
                 <option value="24px">Nhỏ (Màn lớn cận cảnh)</option>
-                <option value="32px" selected>Vừa (Chuẩn điện ảnh)</option>
+                <option value="32px">Vừa (Chuẩn điện ảnh)</option>
                 <option value="40px">Lớn (Dễ đọc hơn)</option>
-                <option value="48px">Rất lớn (Hỗ trợ thị lực)</option>
+                <option value="48px" selected>Rất lớn (Hỗ trợ thị lực)</option>
             </select>
         </div>
 
@@ -2490,8 +2490,8 @@
 
         // 5. CẤU HÌNH & LƯU TRỮ TINH CHỈNH PHỤ ĐỀ
         function loadSubtitleSettings() {
-            const size = localStorage.getItem('sub_size') || '32px';
-            const color = localStorage.getItem('sub_color') || '#ffffff';
+            const size = localStorage.getItem('sub_size') || '48px';
+            const color = localStorage.getItem('sub_color') || '#ffeb3b';
             const bg = localStorage.getItem('sub_bg') || 'transparent';
             const font = localStorage.getItem('sub_font') || "'Outfit', 'Inter', sans-serif";
             const shadow = localStorage.getItem('sub_shadow') || "2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)";
