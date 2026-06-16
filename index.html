@@ -375,6 +375,72 @@
             color: #000 !important;
         }
 
+        /* --- GIAO DIỆN TÙY CHỈNH PHỤ ĐỀ MỚI --- */
+        .subtitle-size-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 8px;
+        }
+        .setting-btn {
+            background: #333;
+            color: #fff;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            width: 50px;
+            height: 40px;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .setting-btn:focus, .setting-btn.focused {
+            background: var(--focus-color) !important;
+            color: #000 !important;
+            border-color: var(--focus-color);
+            transform: scale(1.1);
+            outline: none;
+        }
+        #sub-size-display {
+            font-size: 18px;
+            font-weight: 800;
+            min-width: 60px;
+            text-align: center;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .color-swatches {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        .color-swatch {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            padding: 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        .color-swatch:focus, .color-swatch.focused {
+            transform: scale(1.15);
+            border-color: var(--focus-color);
+            box-shadow: 0 0 12px var(--focus-color);
+            outline: none;
+        }
+        .color-swatch.active {
+            border: 4px solid #ffffff !important;
+            transform: scale(1.08);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+        }
 
         /* --- MODAL CÀI ĐẶT --- */
         .settings-modal-overlay {
@@ -1173,12 +1239,13 @@
 
         <div class="setting-group">
             <label>MÀU SẮC CHỮ</label>
-            <select id="sub-color-select" tabindex="0" class="focusable">
-                <option value="#ffffff">Trắng tinh khôi</option>
-                <option value="#ffeb3b" selected>Vàng ấm áp (Netflix)</option>
-                <option value="#00ff00">Xanh lục dịu mắt</option>
-                <option value="#00e5ff">Xanh ngọc hiện đại</option>
-            </select>
+            <div class="color-swatches" id="sub-color-swatches">
+                <button class="color-swatch focusable" data-color="#ffffff" style="background-color: #ffffff;" tabindex="0" title="Trắng"></button>
+                <button class="color-swatch focusable" data-color="#ffeb3b" style="background-color: #ffeb3b;" tabindex="0" title="Vàng Netflix"></button>
+                <button class="color-swatch focusable" data-color="#00ff00" style="background-color: #00ff00;" tabindex="0" title="Xanh lục"></button>
+                <button class="color-swatch focusable" data-color="#00e5ff" style="background-color: #00e5ff;" tabindex="0" title="Xanh ngọc"></button>
+                <button class="color-swatch focusable" data-color="#ff3333" style="background-color: #ff3333;" tabindex="0" title="Đỏ"></button>
+            </div>
         </div>
 
         <div class="setting-group">
@@ -1193,12 +1260,11 @@
 
         <div class="setting-group">
             <label>KÍCH THƯỚC CHỮ</label>
-            <select id="sub-size-select" tabindex="0" class="focusable">
-                <option value="24px">Nhỏ (Màn lớn cận cảnh)</option>
-                <option value="32px">Vừa (Chuẩn điện ảnh)</option>
-                <option value="40px">Lớn (Dễ đọc hơn)</option>
-                <option value="48px" selected>Rất lớn (Hỗ trợ thị lực)</option>
-            </select>
+            <div class="subtitle-size-control">
+                <button id="sub-size-dec-btn" class="focusable setting-btn" tabindex="0">-</button>
+                <span id="sub-size-display">48px</span>
+                <button id="sub-size-inc-btn" class="focusable setting-btn" tabindex="0">+</button>
+            </div>
         </div>
 
         <div class="setting-group">
@@ -1590,9 +1656,7 @@
         let currentPinText = "";
 
         // Elements cấu hình phụ đề
-        const subColorSelect = document.getElementById('sub-color-select');
         const subFontSelect = document.getElementById('sub-font-select');
-        const subSizeSelect = document.getElementById('sub-size-select');
         const subShadowSelect = document.getElementById('sub-shadow-select');
         const subBgSelect = document.getElementById('sub-bg-select');
         const subPositionSelect = document.getElementById('sub-position-select');
@@ -2489,22 +2553,83 @@
         }
 
         // 5. CẤU HÌNH & LƯU TRỮ TINH CHỈNH PHỤ ĐỀ
+        let activeSubColor = '#ffeb3b';
+        let activeSubSize = '48px';
+
+        function updateSubSizeUI() {
+            const sizeDisplay = document.getElementById('sub-size-display');
+            if (sizeDisplay) {
+                sizeDisplay.textContent = activeSubSize;
+            }
+        }
+
+        function updateSubColorUI() {
+            const swatches = document.querySelectorAll('.color-swatch');
+            swatches.forEach(swatch => {
+                const colorVal = swatch.dataset.color;
+                if (colorVal && colorVal.toLowerCase() === activeSubColor.toLowerCase()) {
+                    swatch.classList.add('active');
+                } else {
+                    swatch.classList.remove('active');
+                }
+            });
+        }
+
+        function changeSubtitleSize(diff) {
+            let currentSize = parseInt(activeSubSize) || 48;
+            currentSize = Math.max(20, Math.min(80, currentSize + diff));
+            activeSubSize = currentSize + 'px';
+            saveAndApplySubtitleSettings();
+            updateSubSizeUI();
+            showSeekToast(`Cỡ chữ phụ đề: ${currentSize}px`);
+        }
+
+        function changeSubtitleColor(color) {
+            activeSubColor = color;
+            saveAndApplySubtitleSettings();
+            updateSubColorUI();
+            showSeekToast(`Đã đổi màu phụ đề`);
+        }
+
+        function initNewSubtitleControls() {
+            const decBtn = document.getElementById('sub-size-dec-btn');
+            const incBtn = document.getElementById('sub-size-inc-btn');
+            if (decBtn) {
+                decBtn.onclick = () => changeSubtitleSize(-2);
+            }
+            if (incBtn) {
+                incBtn.onclick = () => changeSubtitleSize(2);
+            }
+
+            const swatches = document.querySelectorAll('.color-swatch');
+            swatches.forEach(swatch => {
+                swatch.onclick = () => {
+                    const selectedColor = swatch.dataset.color;
+                    if (selectedColor) {
+                        changeSubtitleColor(selectedColor);
+                    }
+                };
+            });
+        }
+
         function loadSubtitleSettings() {
-            const size = localStorage.getItem('sub_size') || '48px';
-            const color = localStorage.getItem('sub_color') || '#ffeb3b';
+            activeSubSize = localStorage.getItem('sub_size') || '48px';
+            activeSubColor = localStorage.getItem('sub_color') || '#ffeb3b';
             const bg = localStorage.getItem('sub_bg') || 'transparent';
             const font = localStorage.getItem('sub_font') || "'Outfit', 'Inter', sans-serif";
             const shadow = localStorage.getItem('sub_shadow') || "2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)";
             const position = localStorage.getItem('sub_position') || '85';
 
-            subSizeSelect.value = size;
-            subColorSelect.value = color;
             subBgSelect.value = bg;
             if (subFontSelect) subFontSelect.value = font;
             if (subShadowSelect) subShadowSelect.value = shadow;
             if (subPositionSelect) subPositionSelect.value = position;
 
-            applySubtitleSettings(size, color, bg, font, shadow);
+            updateSubSizeUI();
+            updateSubColorUI();
+            initNewSubtitleControls();
+
+            applySubtitleSettings(activeSubSize, activeSubColor, bg, font, shadow);
             applySubtitlePosition(parseInt(position));
             loadCorsProxySettings();
         }
@@ -2519,8 +2644,8 @@
 
         function getSubtitleSettings() {
             return {
-                size: subSizeSelect.value,
-                color: subColorSelect.value,
+                size: activeSubSize,
+                color: activeSubColor,
                 bg: subBgSelect.value,
                 font: subFontSelect ? subFontSelect.value : "'Outfit', 'Inter', sans-serif",
                 shadow: subShadowSelect ? subShadowSelect.value : "2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8)",
@@ -2540,8 +2665,6 @@
             applySubtitlePosition(parseInt(settings.position));
         }
 
-        subColorSelect.onchange = saveAndApplySubtitleSettings;
-        subSizeSelect.onchange = saveAndApplySubtitleSettings;
         subBgSelect.onchange = saveAndApplySubtitleSettings;
         if (subFontSelect) subFontSelect.onchange = saveAndApplySubtitleSettings;
         if (subShadowSelect) subShadowSelect.onchange = saveAndApplySubtitleSettings;
@@ -3354,6 +3477,18 @@
 
             // Chặn phím số chuyển kênh nếu đang gõ dữ liệu trong các ô Input (Cài đặt Token...)
             const isInputActive = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
+
+            // ========== PHÍM TẮT +/- TĂNG GIẢM CỠ CHỮ PHỤ ĐỀ NHANH ==========
+            if ((e.key === '+' || e.key === '=' || keyCode === 107 || keyCode === 187) && !isInputActive) {
+                e.preventDefault();
+                changeSubtitleSize(2);
+                return;
+            }
+            if ((e.key === '-' || keyCode === 109 || keyCode === 189) && !isInputActive) {
+                e.preventDefault();
+                changeSubtitleSize(-2);
+                return;
+            }
 
             // ========== 1. XỬ LÝ PHÍM SỐ (0-9) ĐỂ CHUYỂN KÊNH NHANH ==========
             if (keyCode >= 48 && keyCode <= 57 && !isInputActive) {
