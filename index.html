@@ -2391,7 +2391,8 @@
             if (cached) {
                 try {
                     const { cdnUrl, expireAt } = JSON.parse(cached);
-                    if (Date.now() < (expireAt - 5 * 60 * 1000)) {
+                    // Chỉ lấy từ cache nếu link là HTTPS và chưa hết hạn
+                    if (Date.now() < (expireAt - 5 * 60 * 1000) && cdnUrl.startsWith('https://')) {
                         console.log("📺 Lấy link TV360 từ cache:", cdnUrl);
                         return cdnUrl;
                     }
@@ -2405,11 +2406,11 @@
                     url: 'https://www.redirectcheck.org/api/check',
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: sourceUrl }),
+                    body: (url) => JSON.stringify({ url }),
                     parse: (data) => data?.final_result?.final_url
                 },
                 {
-                    url: `https://unshorten.me/json/${encodeURIComponent(sourceUrl)}`,
+                    url: (url) => `https://unshorten.me/json/${encodeURIComponent(url)}`,
                     method: 'GET',
                     headers: {},
                     body: null,
@@ -2417,31 +2418,50 @@
                 }
             ];
 
-            for (const api of apis) {
-                try {
-                    console.log("Gọi API phân giải TV360:", api.url);
-                    const res = await fetchWithTimeout(api.url, {
-                        method: api.method,
-                        headers: api.headers,
-                        body: api.body
-                    }, 5000);
+            const maxRetries = 5;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                for (const api of apis) {
+                    try {
+                        const targetUrl = typeof api.url === 'function' ? api.url(sourceUrl) : api.url;
+                        const requestBody = typeof api.body === 'function' ? api.body(sourceUrl) : api.body;
+                        
+                        console.log(`[WEBTV] Lần thử ${attempt}/${maxRetries} - Phân giải TV360 qua:`, targetUrl);
+                        const res = await fetchWithTimeout(targetUrl, {
+                            method: api.method,
+                            headers: api.headers,
+                            body: requestBody
+                        }, 5000);
 
-                    if (res.ok) {
-                        const data = await res.json();
-                        const resolvedUrl = api.parse(data);
-                        if (resolvedUrl && resolvedUrl.includes('m3u8')) {
-                            const expiryTime = getExpiryTimeFromUrl(resolvedUrl);
-                            const expireAt = expiryTime ? expiryTime : (Date.now() + 30 * 60 * 1000);
-                            sessionStorage.setItem(cacheKey, JSON.stringify({ cdnUrl: resolvedUrl, expireAt }));
-                            console.log("✅ Phân giải thành công TV360:", resolvedUrl);
-                            return resolvedUrl;
+                        if (res.ok) {
+                            const data = await res.json();
+                            const resolvedUrl = api.parse(data);
+                            if (resolvedUrl && resolvedUrl.includes('m3u8')) {
+                                // ĐIỀU KIỆN QUAN TRỌNG: Chỉ chấp nhận link HTTPS an toàn
+                                if (resolvedUrl.startsWith('https://')) {
+                                    const expiryTime = getExpiryTimeFromUrl(resolvedUrl);
+                                    const expireAt = expiryTime ? expiryTime : (Date.now() + 30 * 60 * 1000);
+                                    sessionStorage.setItem(cacheKey, JSON.stringify({ cdnUrl: resolvedUrl, expireAt }));
+                                    console.log("✅ Phân giải thành công TV360 (HTTPS):", resolvedUrl);
+                                    return resolvedUrl;
+                                } else {
+                                    console.warn(`[WEBTV] Lần thử ${attempt} nhận link HTTP không an toàn (${resolvedUrl}). Bỏ qua và thử lại...`);
+                                }
+                            }
                         }
+                    } catch (err) {
+                        console.warn(`[WEBTV] Lần thử ${attempt} qua API gặp lỗi hoặc timeout:`, err);
                     }
-                } catch (err) {
-                    console.warn(`API phân giải ${api.url} lỗi hoặc timeout:`, err);
+                }
+                
+                // Đợi một khoảng thời gian tăng dần trước khi thử lại
+                if (attempt < maxRetries) {
+                    const delay = 300 * attempt;
+                    await new Promise(resolve => setTimeout(resolve, delay));
                 }
             }
-            return sourceUrl;
+
+            console.error("❌ Đã thử phân giải TV360 5 lần nhưng thất bại hoặc chỉ nhận được link HTTP.");
+            return sourceUrl; // Trả về link gốc làm fallback cuối cùng
         }
         // --- KẾT THÚC: PHÂN GIẢI VÀ CACHE TV360 REDIRECT ---
 
