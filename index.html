@@ -1668,7 +1668,26 @@
         let channelNumberBuffer = "";
         let channelNumberTimeout = null;
         
-        // Custom Loader class để tự động định tuyến toàn bộ request qua CORS proxy
+        // Hàm lọc thông minh: Chỉ proxy các nguồn thiếu CORS, bỏ qua CDN hỗ trợ CORS gốc có khóa IP
+        function shouldProxyUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            if (url.startsWith('https://corsproxy.io/')) return false;
+
+            try {
+                const hostname = new URL(url).hostname.toLowerCase();
+                // Danh sách các đuôi domain/CDN lớn hỗ trợ CORS gốc và khóa IP
+                const directDomains = ['.tv360.vn', 'tv360.vn', 'tv360.com.vn', 'fptplay', 'vtvgo', 'vietanhtv.top', '.vietanhtv.top'];
+                if (directDomains.some(domain => hostname.includes(domain))) {
+                    return false;
+                }
+            } catch (e) {
+                // Nếu URL không hợp lệ (URL tương đối), không proxy
+                return false;
+            }
+            return true;
+        }
+
+        // Custom Loader class để tự động định tuyến các request cần thiết qua CORS proxy
         class CorsProxyLoader {
             constructor(config) {
                 if (Hls && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
@@ -1676,7 +1695,7 @@
                 }
             }
             load(context, config, callbacks) {
-                if (context.url && !context.url.startsWith('https://corsproxy.io/')) {
+                if (context.url && shouldProxyUrl(context.url)) {
                     context.url = 'https://corsproxy.io/?' + context.url;
                 }
                 if (this.loader) {
@@ -2316,6 +2335,116 @@
             }
         }
 
+        // --- BẮT ĐẦU: PHÂN GIẢI VÀ CACHE TV360 REDIRECT ---
+        function getExpiryTimeFromUrl(cdnUrl) {
+            try {
+                const urlObj = new URL(cdnUrl);
+                const expiryParam = urlObj.searchParams.get('e') || 
+                                    urlObj.searchParams.get('exp') || 
+                                    urlObj.searchParams.get('expires') ||
+                                    urlObj.searchParams.get('timestamp');
+                if (expiryParam && !isNaN(expiryParam)) {
+                    return parseInt(expiryParam, 10) * 1000;
+                }
+            } catch (e) {
+                console.error("Lỗi parse expiry từ URL CDN:", e);
+            }
+            return null;
+        }
+
+        function fetchWithTimeout(url, options = {}, timeout = 6000) {
+            return new Promise((resolve, reject) => {
+                if (window.fetch && window.AbortController) {
+                    const controller = new AbortController();
+                    const id = setTimeout(() => controller.abort(), timeout);
+                    fetch(url, { ...options, signal: controller.signal })
+                        .then(res => resolve(res))
+                        .catch(err => reject(err))
+                        .finally(() => clearTimeout(id));
+                } else {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open(options.method || 'GET', url, true);
+                    xhr.timeout = timeout;
+                    if (options.headers) {
+                        for (const key in options.headers) {
+                            xhr.setRequestHeader(key, options.headers[key]);
+                        }
+                    }
+                    xhr.onload = () => {
+                        resolve({
+                            ok: xhr.status >= 200 && xhr.status < 300,
+                            status: xhr.status,
+                            json: () => Promise.resolve(JSON.parse(xhr.responseText)),
+                            text: () => Promise.resolve(xhr.responseText)
+                        });
+                    };
+                    xhr.ontimeout = () => reject(new Error('Timeout'));
+                    xhr.onerror = () => reject(new Error('Network error'));
+                    xhr.send(options.body || null);
+                }
+            });
+        }
+
+        async function resolveTV360Url(sourceUrl) {
+            const cacheKey = "tv360_" + btoa(sourceUrl).replace(/=/g, "");
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const { cdnUrl, expireAt } = JSON.parse(cached);
+                    if (Date.now() < (expireAt - 5 * 60 * 1000)) {
+                        console.log("📺 Lấy link TV360 từ cache:", cdnUrl);
+                        return cdnUrl;
+                    }
+                } catch (e) {
+                    sessionStorage.removeItem(cacheKey);
+                }
+            }
+
+            const apis = [
+                {
+                    url: 'https://www.redirectcheck.org/api/check',
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: sourceUrl }),
+                    parse: (data) => data?.final_result?.final_url
+                },
+                {
+                    url: `https://unshorten.me/json/${encodeURIComponent(sourceUrl)}`,
+                    method: 'GET',
+                    headers: {},
+                    body: null,
+                    parse: (data) => data?.resolved_url
+                }
+            ];
+
+            for (const api of apis) {
+                try {
+                    console.log("Gọi API phân giải TV360:", api.url);
+                    const res = await fetchWithTimeout(api.url, {
+                        method: api.method,
+                        headers: api.headers,
+                        body: api.body
+                    }, 5000);
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        const resolvedUrl = api.parse(data);
+                        if (resolvedUrl && resolvedUrl.includes('m3u8')) {
+                            const expiryTime = getExpiryTimeFromUrl(resolvedUrl);
+                            const expireAt = expiryTime ? expiryTime : (Date.now() + 30 * 60 * 1000);
+                            sessionStorage.setItem(cacheKey, JSON.stringify({ cdnUrl: resolvedUrl, expireAt }));
+                            console.log("✅ Phân giải thành công TV360:", resolvedUrl);
+                            return resolvedUrl;
+                        }
+                    }
+                } catch (err) {
+                    console.warn(`API phân giải ${api.url} lỗi hoặc timeout:`, err);
+                }
+            }
+            return sourceUrl;
+        }
+        // --- KẾT THÚC: PHÂN GIẢI VÀ CACHE TV360 REDIRECT ---
+
         // 4. PHÂN TÍCH VÀ PHÁT VIDEO KÈM PHỤ ĐỀ (TỐI ƯU TV)
         async function loadAndPlay(url, subUrl, drmKey) {
             if (isVideoLoading) return;
@@ -2360,17 +2489,34 @@
             // Đợi microtask để giải phóng decoder cũ
             await new Promise(r => setTimeout(r, 20));
 
-            const useProxy = localStorage.getItem('cors_proxy') === 'on';
-            const proxiedUrl = useProxy && !url.startsWith('https://corsproxy.io/') 
-                ? 'https://corsproxy.io/?' + url 
-                : url;
+            let targetPlayUrl = url;
+            let forceDisableProxy = false;
+
+            if (url && (url.includes('vietanhtv.top') || url.includes('tv360.php') || url.includes('tv360'))) {
+                try {
+                    const statusText = document.querySelector('.stall-recovery-toast');
+                    if (statusText) statusText.textContent = "Đang giải mã luồng phát...";
+                    const resolvedUrl = await resolveTV360Url(url);
+                    if (resolvedUrl !== url) {
+                        targetPlayUrl = resolvedUrl;
+                        forceDisableProxy = true;
+                    }
+                } catch (e) {
+                    console.error("Lỗi giải mã TV360:", e);
+                }
+            }
+
+            const useProxy = forceDisableProxy ? false : (localStorage.getItem('cors_proxy') === 'on');
+            const proxiedUrl = (useProxy && shouldProxyUrl(targetPlayUrl))
+                ? 'https://corsproxy.io/?' + targetPlayUrl 
+                : targetPlayUrl;
 
             if (subUrl) {
                 loadSubtitleAsync(subUrl);
             }
 
             try {
-                if (url.toLowerCase().includes('.mpd')) {
+                if (targetPlayUrl.toLowerCase().includes('.mpd')) {
                     dashPlayer = dashjs.MediaPlayer().create();
                     dashPlayer.updateSettings(TV_DASH_CONFIG);
                     
@@ -2378,7 +2524,7 @@
                         dashPlayer.extend("RequestModifier", function () {
                             return {
                                 modifyRequestURL: function (reqUrl) {
-                                    if (reqUrl && !reqUrl.startsWith('https://corsproxy.io/')) {
+                                    if (reqUrl && shouldProxyUrl(reqUrl)) {
                                         return 'https://corsproxy.io/?' + reqUrl;
                                     }
                                     return reqUrl;
