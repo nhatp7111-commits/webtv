@@ -2573,6 +2573,38 @@
                         updateQualityLevels();
                         startStallCheck();
                     });
+
+                    dashPlayer.on(dashjs.MediaPlayer.events.PLAYBACK_STARTED, () => {
+                        try {
+                            const bitrates = dashPlayer.getBitrateInfoListFor('video');
+                            if (bitrates && bitrates.length > 0) {
+                                let targetIdx = -1;
+                                let maxHeight = 0;
+                                bitrates.forEach((info, idx) => {
+                                    if (info.height === 1080) {
+                                        targetIdx = idx;
+                                    } else if (info.height > maxHeight && targetIdx === -1) {
+                                        maxHeight = info.height;
+                                    }
+                                });
+                                if (targetIdx === -1) {
+                                    bitrates.forEach((info, idx) => {
+                                        if (info.height === maxHeight) {
+                                            targetIdx = idx;
+                                        }
+                                    });
+                                }
+                                if (targetIdx !== -1) {
+                                    dashPlayer.updateSettings({ 'streaming': { 'abr': { 'autoSwitchBitrate': { 'video': false } } } });
+                                    dashPlayer.setQualityFor('video', targetIdx);
+                                    console.log(`[WEBTV] DASH tự động chuyển chất lượng lên: ${bitrates[targetIdx].height || 'Cao nhất'}p`);
+                                    setTimeout(() => updateQualityLevels(), 500);
+                                }
+                            }
+                        } catch (err) {
+                            console.error("Lỗi đặt chất lượng DASH:", err);
+                        }
+                    });
                     
                     dashPlayer.on(dashjs.MediaPlayer.events.PLAYBACK_STALLED, () => {
                         handleStallRecovery();
@@ -2593,7 +2625,28 @@
                     hls.loadSource(proxiedUrl);
                     hls.attachMedia(video);
                     
-                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+                        hls.targetDefaultLevel = -1;
+                        if (hls.levels && hls.levels.length > 0) {
+                            let targetLevel = -1;
+                            let maxHeight = 0;
+                            hls.levels.forEach((level, index) => {
+                                if (level.height === 1080) {
+                                    targetLevel = index;
+                                } else if (level.height > maxHeight && targetLevel === -1) {
+                                    maxHeight = level.height;
+                                }
+                            });
+                            if (targetLevel === -1) {
+                                hls.levels.forEach((level, index) => {
+                                    if (level.height === maxHeight) {
+                                        targetLevel = index;
+                                    }
+                                });
+                            }
+                            hls.targetDefaultLevel = targetLevel;
+                        }
+
                         if (savedPosition > 0) {
                             video.currentTime = savedPosition;
                             showSeekToast("Đang phát tiếp từ " + formatTime(savedPosition));
@@ -2602,6 +2655,14 @@
                         loadingIndicator.classList.remove('active');
                         updateQualityLevels();
                         startStallCheck();
+                    });
+
+                    hls.once(Hls.Events.FRAG_BUFFERED, () => {
+                        if (hls.targetDefaultLevel !== undefined && hls.targetDefaultLevel !== -1) {
+                            hls.nextLoadLevel = hls.targetDefaultLevel;
+                            console.log(`[WEBTV] HLS tự động chuyển chất lượng lên: ${hls.levels[hls.targetDefaultLevel].height || 'Cao nhất'}p`);
+                            setTimeout(() => updateQualityLevels(), 500);
+                        }
                     });
 
                     hls.on(Hls.Events.ERROR, function (event, data) {
