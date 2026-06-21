@@ -2566,15 +2566,7 @@
                     
                     dashPlayer.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
                         loadingIndicator.classList.remove('active');
-                        if (savedPosition > 0) {
-                            video.currentTime = savedPosition;
-                            showSeekToast("Đang phát tiếp từ " + formatTime(savedPosition));
-                        }
-                        updateQualityLevels();
-                        startStallCheck();
-                    });
-
-                    dashPlayer.on(dashjs.MediaPlayer.events.PLAYBACK_STARTED, () => {
+                        
                         try {
                             const bitrates = dashPlayer.getBitrateInfoListFor('video');
                             if (bitrates && bitrates.length > 0) {
@@ -2597,13 +2589,19 @@
                                 if (targetIdx !== -1) {
                                     dashPlayer.updateSettings({ 'streaming': { 'abr': { 'autoSwitchBitrate': { 'video': false } } } });
                                     dashPlayer.setQualityFor('video', targetIdx);
-                                    console.log(`[WEBTV] DASH tự động chuyển chất lượng lên: ${bitrates[targetIdx].height || 'Cao nhất'}p`);
-                                    setTimeout(() => updateQualityLevels(), 500);
+                                    console.log(`[WEBTV] DASH đã khóa chất lượng mặc định: ${bitrates[targetIdx].height || 'Cao nhất'}p`);
                                 }
                             }
                         } catch (err) {
-                            console.error("Lỗi đặt chất lượng DASH:", err);
+                            console.error("Lỗi đặt chất lượng DASH mặc định:", err);
                         }
+
+                        if (savedPosition > 0) {
+                            video.currentTime = savedPosition;
+                            showSeekToast("Đang phát tiếp từ " + formatTime(savedPosition));
+                        }
+                        updateQualityLevels();
+                        startStallCheck();
                     });
                     
                     dashPlayer.on(dashjs.MediaPlayer.events.PLAYBACK_STALLED, () => {
@@ -2626,11 +2624,11 @@
                     hls.attachMedia(video);
                     
                     hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-                        hls.targetDefaultLevel = -1;
-                        if (hls.levels && hls.levels.length > 0) {
+                        const levels = (data && data.levels) || hls.levels;
+                        if (levels && levels.length > 0) {
                             let targetLevel = -1;
                             let maxHeight = 0;
-                            hls.levels.forEach((level, index) => {
+                            levels.forEach((level, index) => {
                                 if (level.height === 1080) {
                                     targetLevel = index;
                                 } else if (level.height > maxHeight && targetLevel === -1) {
@@ -2638,13 +2636,16 @@
                                 }
                             });
                             if (targetLevel === -1) {
-                                hls.levels.forEach((level, index) => {
+                                levels.forEach((level, index) => {
                                     if (level.height === maxHeight) {
                                         targetLevel = index;
                                     }
                                 });
                             }
-                            hls.targetDefaultLevel = targetLevel;
+                            if (targetLevel !== -1) {
+                                hls.currentLevel = targetLevel; // Khóa cứng chất lượng ngay lập tức
+                                console.log(`[WEBTV] HLS đã khóa chất lượng mặc định: ${levels[targetLevel].height || 'Cao nhất'}p`);
+                            }
                         }
 
                         if (savedPosition > 0) {
@@ -2655,14 +2656,6 @@
                         loadingIndicator.classList.remove('active');
                         updateQualityLevels();
                         startStallCheck();
-                    });
-
-                    hls.once(Hls.Events.FRAG_BUFFERED, () => {
-                        if (hls.targetDefaultLevel !== undefined && hls.targetDefaultLevel !== -1) {
-                            hls.nextLoadLevel = hls.targetDefaultLevel;
-                            console.log(`[WEBTV] HLS tự động chuyển chất lượng lên: ${hls.levels[hls.targetDefaultLevel].height || 'Cao nhất'}p`);
-                            setTimeout(() => updateQualityLevels(), 500);
-                        }
                     });
 
                     hls.on(Hls.Events.ERROR, function (event, data) {
@@ -3034,7 +3027,13 @@
                     option.textContent = name;
                     qualitySelect.appendChild(option);
                 });
-                qualitySelect.value = hls.currentLevel;
+                
+                const isAuto = hls.autoLevelEnabled || (hls.loadLevel === -1 && hls.nextLoadLevel === -1);
+                if (isAuto) {
+                    qualitySelect.value = -1;
+                } else {
+                    qualitySelect.value = hls.nextLoadLevel !== -1 ? hls.nextLoadLevel : hls.loadLevel;
+                }
                 return;
             }
 
