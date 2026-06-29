@@ -1376,6 +1376,9 @@
     // Đường dẫn URL cấu hình danh sách kênh đã mã hóa AES
     const CHANNELS_JSON_URL = "https://raw.githubusercontent.com/nhatp7111-commits/webtv-configs/refs/heads/main/channels.enc";
 
+    // Cloudflare Worker - phân giải redirect TV360 (cần deploy trước)
+    const TV360_WORKER_URL = "https://ancient-night-828e.nhatp7111.workers.dev";
+
     // Trình chủ ntfy.sh (Public Free Broker)
     const NTFY_SERVER = "https://ntfy.sh/";
     let cachedEncryptedData = ""; // Lưu trữ tạm chuỗi mã hóa tải về
@@ -2391,8 +2394,7 @@
             if (cached) {
                 try {
                     const { cdnUrl, expireAt } = JSON.parse(cached);
-                    // Chỉ lấy từ cache nếu link là HTTPS và chưa hết hạn
-                    if (Date.now() < (expireAt - 5 * 60 * 1000) && cdnUrl.startsWith('https://')) {
+                    if (Date.now() < expireAt && cdnUrl.startsWith('https://')) {
                         console.log("📺 Lấy link TV360 từ cache:", cdnUrl);
                         return cdnUrl;
                     }
@@ -2400,68 +2402,20 @@
                     sessionStorage.removeItem(cacheKey);
                 }
             }
-
-            const apis = [
-                {
-                    url: 'https://www.redirectcheck.org/api/check',
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: (url) => JSON.stringify({ url }),
-                    parse: (data) => data?.final_result?.final_url
-                },
-                {
-                    url: (url) => `https://unshorten.me/json/${encodeURIComponent(url)}`,
-                    method: 'GET',
-                    headers: {},
-                    body: null,
-                    parse: (data) => data?.resolved_url
+            try {
+                const workerUrl = TV360_WORKER_URL + '?url=' + encodeURIComponent(sourceUrl);
+                const res = await fetch(workerUrl);
+                const data = await res.json();
+                if (data.success && data.final_url && data.final_url !== sourceUrl && data.final_url.includes('m3u8')) {
+                    const expireAt = Date.now() + 3 * 60 * 1000;
+                    sessionStorage.setItem(cacheKey, JSON.stringify({ cdnUrl: data.final_url, expireAt }));
+                    console.log("✅ Worker phân giải TV360 thành công:", data.final_url);
+                    return data.final_url;
                 }
-            ];
-
-            const maxRetries = 5;
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                for (const api of apis) {
-                    try {
-                        const targetUrl = typeof api.url === 'function' ? api.url(sourceUrl) : api.url;
-                        const requestBody = typeof api.body === 'function' ? api.body(sourceUrl) : api.body;
-                        
-                        console.log(`[WEBTV] Lần thử ${attempt}/${maxRetries} - Phân giải TV360 qua:`, targetUrl);
-                        const res = await fetchWithTimeout(targetUrl, {
-                            method: api.method,
-                            headers: api.headers,
-                            body: requestBody
-                        }, 5000);
-
-                        if (res.ok) {
-                            const data = await res.json();
-                            const resolvedUrl = api.parse(data);
-                            if (resolvedUrl && resolvedUrl.includes('m3u8')) {
-                                // ĐIỀU KIỆN QUAN TRỌNG: Chỉ chấp nhận link HTTPS an toàn
-                                if (resolvedUrl.startsWith('https://')) {
-                                    const expiryTime = getExpiryTimeFromUrl(resolvedUrl);
-                                    const expireAt = expiryTime ? expiryTime : (Date.now() + 30 * 60 * 1000);
-                                    sessionStorage.setItem(cacheKey, JSON.stringify({ cdnUrl: resolvedUrl, expireAt }));
-                                    console.log("✅ Phân giải thành công TV360 (HTTPS):", resolvedUrl);
-                                    return resolvedUrl;
-                                } else {
-                                    console.warn(`[WEBTV] Lần thử ${attempt} nhận link HTTP không an toàn (${resolvedUrl}). Bỏ qua và thử lại...`);
-                                }
-                            }
-                        }
-                    } catch (err) {
-                        console.warn(`[WEBTV] Lần thử ${attempt} qua API gặp lỗi hoặc timeout:`, err);
-                    }
-                }
-                
-                // Đợi một khoảng thời gian tăng dần trước khi thử lại
-                if (attempt < maxRetries) {
-                    const delay = 300 * attempt;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
+            } catch (err) {
+                console.warn("⚠️ Worker TV360 không phản hồi, dùng URL gốc:", err);
             }
-
-            console.error("❌ Đã thử phân giải TV360 5 lần nhưng thất bại hoặc chỉ nhận được link HTTP.");
-            return sourceUrl; // Trả về link gốc làm fallback cuối cùng
+            return sourceUrl;
         }
         // --- KẾT THÚC: PHÂN GIẢI VÀ CACHE TV360 REDIRECT ---
 
@@ -2513,20 +2467,19 @@
             let forceDisableProxy = false;
 
             if (url && (url.includes('vietanhtv.top') || url.includes('tv360.php') || url.includes('tv360'))) {
-                try {
-                    const statusText = document.querySelector('.stall-recovery-toast');
-                    if (statusText) statusText.textContent = "Đang giải mã luồng phát...";
-                    const resolvedUrl = await resolveTV360Url(url);
-                    if (resolvedUrl !== url) {
-                        targetPlayUrl = resolvedUrl;
-                        forceDisableProxy = true;
-                    }
-                } catch (e) {
-                    console.error("Lỗi giải mã TV360:", e);
+                const resolvedUrl = await resolveTV360Url(url);
+                if (resolvedUrl !== url) {
+                    targetPlayUrl = resolvedUrl;
+                    forceDisableProxy = true;
                 }
             }
 
-            const useProxy = forceDisableProxy ? false : (localStorage.getItem('cors_proxy') === 'on');
+            let useProxy;
+            if (forceDisableProxy) {
+                useProxy = false;
+            } else {
+                useProxy = localStorage.getItem('cors_proxy') === 'on';
+            }
             const proxiedUrl = (useProxy && shouldProxyUrl(targetPlayUrl))
                 ? 'https://corsproxy.io/?' + targetPlayUrl 
                 : targetPlayUrl;
