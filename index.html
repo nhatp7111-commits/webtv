@@ -260,9 +260,7 @@
             left: -320px; /* Ẩn ngoài màn hình */
             width: 320px;
             height: 100%;
-            background: rgba(15, 15, 20, 0.85);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
+            background: rgba(15, 15, 20, 0.92);
             border-right: 1px solid rgba(255, 255, 255, 0.15);
             z-index: 2100; /* đè trên controls-overlay (z-index 2000) và dưới modals (z-index 3000) */
             transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -341,9 +339,7 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            background: rgba(15, 15, 20, 0.85);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(15, 15, 20, 0.92);
             color: var(--focus-color);
             padding: 4px 10px;
             border-radius: 6px;
@@ -446,8 +442,7 @@
         .settings-modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.92);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -504,7 +499,7 @@
 
         /* --- CHỌN LINK DỰ PHÒNG KHI ĐANG XEM (HIỂN THỊ TRÊN OVERLAY) --- */
         .server-links-container-overlay {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.15);
             padding: 15px 25px;
             display: flex;
@@ -512,7 +507,6 @@
             justify-content: space-between;
             border-radius: 10px;
             margin-bottom: 20px;
-            backdrop-filter: blur(5px);
         }
         .server-links-text-overlay {
             color: #ccc;
@@ -615,7 +609,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            aspect-ratio: 2 / 3; /* Tỷ lệ khung dọc chuẩn phim ảnh */
+            min-height: 240px;
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 6px 20px rgba(0,0,0,0.4);
             transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
@@ -627,6 +621,13 @@
             background: rgba(255, 255, 255, 0.08) !important;
             transform: scale(1.06);
             box-shadow: 0 0 20px var(--focus-color);
+        }
+
+        @supports (aspect-ratio: 2 / 3) {
+            .channel-card {
+                aspect-ratio: 2 / 3;
+                min-height: 0;
+            }
         }
 
         .channel-card .img-container {
@@ -1713,6 +1714,21 @@
             }
         }
 
+        // ====== PHÁT HIỆN NỀN TẢNG SMART TV ======
+        const IS_TIZEN = navigator.userAgent.includes('Tizen');
+        const IS_WEBOS = navigator.userAgent.includes('Web0S') || navigator.userAgent.includes('webOS');
+        const IS_SMART_TV = IS_TIZEN || IS_WEBOS;
+
+        function requestTVFullscreen(videoEl, wrapperEl) {
+            if (IS_WEBOS && videoEl && videoEl.webkitEnterFullscreen) {
+                videoEl.webkitEnterFullscreen();
+            } else if (wrapperEl && wrapperEl.requestFullscreen) {
+                wrapperEl.requestFullscreen();
+            } else if (wrapperEl && wrapperEl.webkitRequestFullscreen) {
+                wrapperEl.webkitRequestFullscreen();
+            }
+        }
+
         // ====== CẤU HÌNH BUFFER TỐI THIỂU CHO TV ======
         const TV_HLS_CONFIG = {
             maxBufferLength: 15,           // Giây buffer tối đa (mặc định 60-300s)
@@ -1721,7 +1737,7 @@
             liveSyncDurationCount: 2,
             liveMaxLatencyDurationCount: 5,
             backBufferLength: 10,          // Giữ 10s quá khứ, còn lại xóa
-            enableWorker: true,            // Giảm tải main thread
+            enableWorker: false,           // Tắt worker tránh crash RAM trên Smart TV
             fragLoadingMaxRetry: 4,
             manifestLoadingMaxRetry: 4,
             levelLoadingMaxRetry: 4,
@@ -2437,7 +2453,7 @@
             // Tự động yêu cầu Fullscreen nếu chưa ở Fullscreen
             try {
                 if (playerWrapper && !document.fullscreenElement) {
-                    await playerWrapper.requestFullscreen();
+                    requestTVFullscreen(video, playerWrapper);
                 }
             } catch (err) {
                 console.warn("Fullscreen request blocked: ", err);
@@ -2470,13 +2486,19 @@
                 const resolvedUrl = await resolveTV360Url(url);
                 if (resolvedUrl !== url) {
                     targetPlayUrl = resolvedUrl;
-                    forceDisableProxy = true;
+                    // Nếu CDN URL là HTTPS → không cần proxy (CORS OK)
+                    // Nếu CDN URL là HTTP → cần proxy (mixed content)
+                    if (targetPlayUrl.startsWith('https://')) {
+                        forceDisableProxy = true;
+                    }
                 }
             }
 
             let useProxy;
             if (forceDisableProxy) {
                 useProxy = false;
+            } else if (targetPlayUrl && !targetPlayUrl.startsWith('https://') && targetPlayUrl !== url) {
+                useProxy = true;
             } else {
                 useProxy = localStorage.getItem('cors_proxy') === 'on';
             }
@@ -3054,7 +3076,7 @@
         };
         
         document.getElementById('fullscreen-btn').onclick = () => {
-            if (!document.fullscreenElement) wrapper.requestFullscreen();
+            if (!document.fullscreenElement) requestTVFullscreen(video, wrapper);
             else document.exitFullscreen();
         };
 
@@ -3551,7 +3573,7 @@
             LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40,
             PLAY_PAUSE: 179, PLAY: 415, PAUSE: 19, STOP: 413,
             FAST_FORWARD: 417, REWIND: 412, CHANNEL_UP: 427, CHANNEL_DOWN: 428,
-            ENTER: 13, RETURN: 10009, BACK: 8, BACK_ANDROID: 4, ESCAPE: 27,
+            ENTER: 13, RETURN: 10009, WEBOS_BACK: 461, BACK: 8, BACK_ANDROID: 4, ESCAPE: 27,
             VOLUME_UP: 447, VOLUME_DOWN: 448, VOLUME_MUTE: 449,
             RED: 403, GREEN: 404, YELLOW: 405, BLUE: 406,
             GUIDE: 458, INFO: 457, MENU: 18
@@ -3593,7 +3615,7 @@
                 if (isSidebarOpen) {
                     resetSidebarAutoCloseTimer();
                     if (keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || 
-                        keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE) {
+                        keyCode === KEY_CODES.WEBOS_BACK || keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE) {
                         e.preventDefault();
                         e.stopPropagation();
                         closeChannelSidebar();
@@ -3662,7 +3684,7 @@
                     }
                     return;
                 }
-                if (keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE) {
+                if (keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.WEBOS_BACK || keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE) {
                     e.preventDefault();
                     currentPinText = "";
                     pinInput.value = "";
@@ -3802,7 +3824,7 @@
             if (modal.classList.contains('active')) {
                 const isInputActive = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
 
-                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.BACK_ANDROID || (keyCode === KEY_CODES.BACK && !isInputActive)) {
+                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.WEBOS_BACK || keyCode === KEY_CODES.BACK_ANDROID || (keyCode === KEY_CODES.BACK && !isInputActive)) {
                     e.preventDefault();
                     document.getElementById('close-modal-btn').click();
                     return;
@@ -3835,7 +3857,7 @@
 
             // Xử lý phím trong Cast Modal
             if (castModal.classList.contains('active')) {
-                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.BACK_ANDROID) {
+                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.WEBOS_BACK || keyCode === KEY_CODES.BACK_ANDROID) {
                     e.preventDefault();
                     closeCastBtn.click();
                     return;
@@ -3922,6 +3944,7 @@
                     return;
                 case KEY_CODES.BACK:
                 case KEY_CODES.RETURN:
+                case KEY_CODES.WEBOS_BACK:
                 case KEY_CODES.BACK_ANDROID:
                 case KEY_CODES.ESCAPE:
                     e.preventDefault();
