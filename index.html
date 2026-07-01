@@ -1106,6 +1106,139 @@
             opacity: 1;
             transform: translate(-50%, -50%) scale(1.05);
         }
+        /* ==========================================
+           CHANNEL GUIDE OVERLAY (OK BUTTON)
+           ========================================== */
+        .channel-guide-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            z-index: 100;
+            padding: 40px 50px 50px 50px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .channel-guide-overlay.active {
+            display: block;
+        }
+        .guide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 0 5px;
+        }
+        .guide-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .guide-close-btn {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid transparent;
+            color: #aaa;
+            font-size: 28px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .guide-close-btn:focus, .guide-close-btn.focused {
+            background: var(--focus-color) !important;
+            color: #000 !important;
+            border-color: var(--focus-color);
+            transform: scale(1.1);
+            outline: none;
+        }
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+        .guide-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 20px 12px 16px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            min-height: 160px;
+            box-sizing: border-box;
+        }
+        .guide-item:focus, .guide-item.focused {
+            border-color: var(--focus-color) !important;
+            background: rgba(255, 235, 59, 0.15) !important;
+            transform: scale(1.06);
+            box-shadow: 0 0 25px var(--focus-color);
+            outline: none;
+        }
+        .guide-item:focus .guide-item-name, .guide-item.focused .guide-item-name {
+            color: #000;
+        }
+        .guide-item-img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: transparent;
+            margin-bottom: 10px;
+            pointer-events: none;
+        }
+        .guide-item-index {
+            position: absolute;
+            top: 8px;
+            left: 10px;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--focus-color);
+            font-family: 'Outfit', sans-serif;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .guide-item:focus .guide-item-index {
+            color: #000;
+            background: transparent;
+        }
+        .guide-item-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ddd;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            font-family: 'Outfit', sans-serif;
+            line-height: 1.3;
+        }
+        @media (max-width: 700px) {
+            .channel-guide-overlay { padding: 20px 15px; }
+            .guide-title { font-size: 20px; }
+            .guide-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+            .guide-item { min-height: 120px; padding: 12px 8px; }
+            .guide-item-img { width: 70px; height: 70px; }
+        }
+        @media (min-width: 1400px) {
+            .guide-grid { grid-template-columns: repeat(6, 1fr); }
+        }
     </style>
 </head>
 <body>
@@ -1209,6 +1342,15 @@
                     <button class="btn focusable" id="fullscreen-btn" tabindex="0"><i class="fas fa-expand"></i></button>
                 </div>
             </div>
+        </div>
+
+        <!-- CHANNEL GUIDE OVERLAY FULLSCREEN -->
+        <div class="channel-guide-overlay" id="channel-guide-overlay">
+            <div class="guide-header">
+                <span class="guide-title"><i class="fas fa-list-ul" style="color:var(--focus-color)"></i> DANH SÁCH KÊNH</span>
+                <button class="guide-close-btn focusable" id="guide-close-btn" tabindex="0">✕</button>
+            </div>
+            <div class="guide-grid" id="guide-grid"></div>
         </div>
     </div>
 
@@ -2258,6 +2400,7 @@
         }
 
         function destroyPlayers() {
+            if (isGuideOpen) closeChannelGuide();
             destroyPlayersOnly();
 
             // Ẩn khung player và thoát fullscreen
@@ -3195,6 +3338,70 @@
             }, 5000);
         }
 
+        // ===== CHANNEL GUIDE OVERLAY =====
+        const channelGuideOverlay = document.getElementById('channel-guide-overlay');
+        let isGuideOpen = false;
+        let lastGuideOpenedFrom = null;
+
+        function openChannelGuide() {
+            if (isGuideOpen || !channelGuideOverlay) return;
+            lastGuideOpenedFrom = document.activeElement;
+            isGuideOpen = true;
+
+            const grid = document.getElementById('guide-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const listToRender = channels || [];
+            listToRender.forEach((ch, idx) => {
+                const item = document.createElement('div');
+                item.className = 'guide-item focusable';
+                item.tabIndex = 0;
+                item.dataset.index = idx;
+                item.innerHTML = `
+                    <span class="guide-item-index">${idx + 1}</span>
+                    <img class="guide-item-img" src="${ch.logo}" alt="${ch.name}" loading="lazy" onerror="this.style.display='none'">
+                    <span class="guide-item-name">${ch.name}</span>
+                `;
+                item.onclick = () => {
+                    closeChannelGuide();
+                    loadAndPlay(ch.url, ch.subtitle || ch.sub, ch.key || ch.drm);
+                };
+                grid.appendChild(item);
+            });
+
+            channelGuideOverlay.classList.add('active');
+            isCacheValid = false;
+
+            setTimeout(() => {
+                const items = grid.querySelectorAll('.guide-item');
+                if (items.length > 0) {
+                    let focusIdx = 0;
+                    if (currentVideoUrl) {
+                        const foundIdx = channels.findIndex(ch => ch.url === currentVideoUrl);
+                        if (foundIdx !== -1) focusIdx = foundIdx;
+                    }
+                    items[Math.min(focusIdx, items.length - 1)].focus();
+                } else {
+                    const closeBtn = document.getElementById('guide-close-btn');
+                    if (closeBtn) closeBtn.focus();
+                }
+            }, 100);
+        }
+
+        function closeChannelGuide() {
+            if (!isGuideOpen || !channelGuideOverlay) return;
+            isGuideOpen = false;
+            channelGuideOverlay.classList.remove('active');
+            isCacheValid = false;
+            if (lastGuideOpenedFrom && lastGuideOpenedFrom.isConnected) {
+                lastGuideOpenedFrom.focus();
+            } else {
+                wrapper.focus();
+            }
+            lastGuideOpenedFrom = null;
+        }
+
         function openExitModal() {
             lastExitModalOpenedFrom = document.activeElement;
             exitModal.classList.add('active');
@@ -3243,7 +3450,9 @@
         }
 
         function handleTVBackAction() {
-            if (isSidebarOpen) {
+            if (isGuideOpen) {
+                closeChannelGuide();
+            } else if (isSidebarOpen) {
                 closeChannelSidebar();
             } else if (modal.classList.contains('active')) {
                 closeSettingsModal();
@@ -3265,6 +3474,11 @@
         exitConfirmBtn.onclick = () => exitTVApp();
         if (sidebarToggleBtn) {
             sidebarToggleBtn.onclick = () => openChannelSidebar();
+        }
+
+        const guideCloseBtn = document.getElementById('guide-close-btn');
+        if (guideCloseBtn) {
+            guideCloseBtn.onclick = () => closeChannelGuide();
         }
 
         function openSettingsModal(triggerElement) {
@@ -3441,11 +3655,18 @@
                 });
             }
 
+            if (isGuideOpen && channelGuideOverlay) {
+                return Array.from(channelGuideOverlay.querySelectorAll('.focusable')).filter(el => {
+                    const style = window.getComputedStyle(el);
+                    return style.display !== 'none' && style.visibility !== 'hidden';
+                });
+            }
+
             const playerWrapper = document.getElementById('player-wrapper');
             const isPlayerActive = playerWrapper && playerWrapper.classList.contains('active');
 
             if (isPlayerActive) {
-                if (controlsOverlay.classList.contains('hidden')) {
+                if (controlsOverlay.classList.contains('hidden') && !isGuideOpen) {
                     return [];
                 }
                 return Array.from(playerWrapper.querySelectorAll('.focusable')).filter(el => {
@@ -3647,7 +3868,7 @@
             }
 
             // Xử lý tua nhanh/tua lui 10s khi ở chế độ player và không mở modal
-            if (isPlayerActive && !isModalActive && isSeekingKey) {
+            if (isPlayerActive && !isModalActive && !isGuideOpen && isSeekingKey) {
                 const isControlsHidden = controlsOverlay.classList.contains('hidden');
                 const isNavigatingButtons = activeElement && 
                     (activeElement.tagName === 'BUTTON' || 
@@ -3729,7 +3950,7 @@
             }
 
             // ========== 1. XỬ LÝ PHÍM SỐ (0-9) ĐỂ CHUYỂN KÊNH NHANH ==========
-            if (keyCode >= 48 && keyCode <= 57 && !isInputActive) {
+            if (!isGuideOpen && keyCode >= 48 && keyCode <= 57 && !isInputActive) {
                 e.preventDefault();
                 resetTVIdleTimer();
                 
@@ -3789,7 +4010,7 @@
             }
 
             // ========== 2. XỬ LÝ PHÍM LÊN/XUỐNG ĐỂ LƯỚT KÊNH KHI ẨN MENU ==========
-            if (isPlayerActive && !isModalActive) {
+            if (isPlayerActive && !isModalActive && !isGuideOpen) {
                 const isControlsHidden = controlsOverlay.classList.contains('hidden');
                 if (isControlsHidden && (keyCode === KEY_CODES.UP || keyCode === KEY_CODES.DOWN)) {
                     e.preventDefault();
@@ -3907,6 +4128,7 @@
                     video.currentTime = Math.max(0, video.currentTime - 30);
                     return;
                 case KEY_CODES.CHANNEL_UP:
+                    if (isGuideOpen) return;
                     e.preventDefault();
                     const currentUrl = video.src || (hls && hls.url);
                     const currentIndex = channels.findIndex(ch => ch.url === currentUrl);
@@ -3919,6 +4141,7 @@
                     }
                     return;
                 case KEY_CODES.CHANNEL_DOWN:
+                    if (isGuideOpen) return;
                     e.preventDefault();
                     const currentUrlDown = video.src || (hls && hls.url);
                     const currentIdx = channels.findIndex(ch => ch.url === currentUrlDown);
@@ -3990,8 +4213,17 @@
                 return;
             }
 
+            // ENTER/OK: mở guide nếu đang xem và không có modal/sidebar
             if (keyCode === KEY_CODES.ENTER) {
                 e.preventDefault();
+                const isModalActive = modal.classList.contains('active') || castModal.classList.contains('active') || (exitModal && exitModal.classList.contains('active'));
+                if (isPlayerActive && !isModalActive && !isSidebarOpen && !isGuideOpen) {
+                    const isBtn = activeElement && (activeElement.tagName === 'BUTTON' || activeElement.classList.contains('btn') || activeElement.id === 'progress-area');
+                    if (!isBtn || activeElement === document.body || activeElement === wrapper) {
+                        openChannelGuide();
+                        return;
+                    }
+                }
                 if (activeElement && activeElement !== document.body) {
                     activeElement.click();
                 }
