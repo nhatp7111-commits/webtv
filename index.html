@@ -4213,20 +4213,56 @@
                 return;
             }
 
-            // ENTER/OK: mở guide nếu đang xem và không có modal/sidebar
+            // ENTER/OK: Redesigned with priority tree to prevent fullscreen conflict
             if (keyCode === KEY_CODES.ENTER) {
                 e.preventDefault();
-                const isModalActive = modal.classList.contains('active') || castModal.classList.contains('active') || (exitModal && exitModal.classList.contains('active'));
-                if (isPlayerActive && !isModalActive && !isSidebarOpen && !isGuideOpen) {
-                    const isBtn = activeElement && (activeElement.tagName === 'BUTTON' || activeElement.classList.contains('btn') || activeElement.id === 'progress-area');
-                    if (!isBtn || activeElement === document.body || activeElement === wrapper) {
-                        openChannelGuide();
-                        return;
+                e.stopPropagation();
+                
+                // Priority 1: Modal đang active → đóng modal hoặc xử lý modal
+                const isModalActive = modal.classList.contains('active') || 
+                                      castModal.classList.contains('active') || 
+                                      (exitModal && exitModal.classList.contains('active'));
+                if (isModalActive) {
+                    if (activeElement && activeElement !== document.body) {
+                        activeElement.click();
                     }
+                    return;
                 }
-                if (activeElement && activeElement !== document.body) {
+                
+                // Priority 2: Guide đang mở → xử lý guide
+                if (isGuideOpen) {
+                    if (activeElement && activeElement !== document.body && activeElement !== wrapper) {
+                        activeElement.click();
+                    }
+                    return;
+                }
+                
+                // Priority 3: Sidebar đang mở → xử lý sidebar
+                if (isSidebarOpen) {
+                    if (activeElement && activeElement !== document.body && activeElement !== wrapper) {
+                        activeElement.click();
+                    }
+                    return;
+                }
+                
+                // Priority 4: Player mode active → LUÔN mở guide (không cho click) ✅ FIX
+                if (isPlayerActive) {
+                    openChannelGuide();
+                    return;
+                }
+                
+                // Priority 5: Default → click element nếu hợp lệ
+                const isValidClickTarget = activeElement && 
+                                           activeElement !== document.body && 
+                                           activeElement !== wrapper &&
+                                           (activeElement.tagName === 'BUTTON' || 
+                                            activeElement.classList.contains('btn') ||
+                                            activeElement.id === 'progress-area');
+                
+                if (isValidClickTarget) {
                     activeElement.click();
                 }
+                
                 return;
             }
         });
