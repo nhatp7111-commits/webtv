@@ -13,6 +13,54 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@400;600;800&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
+    <!-- PHASE 1: DEBUG SCRIPT (OK BUTTON DEBUGGING) -->
+    <script>
+    (function initDebugger() {
+      const debugOverlay = document.createElement('div');
+      debugOverlay.id = 'webtv-debug-overlay';
+      debugOverlay.style.cssText = `position: fixed; top: 10px; left: 10px; width: 400px; height: 300px; background: rgba(0, 0, 0, 0.9); border: 2px solid #00ff00; color: #00ff00; font-family: monospace; font-size: 11px; padding: 10px; overflow-y: auto; z-index: 99999; white-space: pre-wrap; word-break: break-all; display: none;`;
+      document.body.appendChild(debugOverlay);
+      const debugState = { enabled: false, events: [], maxEvents: 20 };
+      let redButtonCount = 0, redButtonTimeout = null;
+      window.addEventListener('keydown', function(e) {
+        if (e.keyCode === 403 || e.key === 'Red' || e.key === 'ColorF0Red') {
+          redButtonCount++;
+          clearTimeout(redButtonTimeout);
+          if (redButtonCount === 3) {
+            debugState.enabled = !debugState.enabled;
+            debugOverlay.style.display = debugState.enabled ? 'block' : 'none';
+            addDebugLog(`DEBUG ${debugState.enabled ? 'ENABLED' : 'DISABLED'}`);
+            redButtonCount = 0;
+          }
+          redButtonTimeout = setTimeout(() => { redButtonCount = 0; }, 1000);
+        }
+      }, true);
+      window.addEventListener('keydown', function(e) {
+        if (!debugState.enabled) return;
+        let keyName = e.key || e.keyCode;
+        if (e.keyCode === 13 || e.key === 'Enter') keyName = '⭐ ENTER (13)';
+        if (e.keyCode === 29460) keyName = '⭐ ENTER (29460)';
+        if (e.key === 'OK') keyName = '⭐ OK';
+        if (e.keyCode === 461) keyName = '⭐ RED (461)';
+        addDebugLog(`[${new Date().toLocaleTimeString()}] KEY: ${keyName}\n  keyCode: ${e.keyCode}\n  target: ${e.target?.tagName}#${e.target?.id}\n  activeElement: ${document.activeElement?.tagName}#${document.activeElement?.id}`);
+        console.log('🔍 DEBUG:', { keyCode: e.keyCode, key: e.key, target: e.target?.tagName });
+      }, true);
+      let lastActiveElement = document.activeElement;
+      setInterval(() => {
+        if (document.activeElement !== lastActiveElement && debugState.enabled) {
+          lastActiveElement = document.activeElement;
+          addDebugLog(`FOCUS → ${lastActiveElement?.tagName}#${lastActiveElement?.id}`);
+        }
+      }, 100);
+      function addDebugLog(msg) {
+        debugState.events.push(msg);
+        if (debugState.events.length > debugState.maxEvents) debugState.events.shift();
+        debugOverlay.textContent = `WEBTV DEBUG\n${new Date().toLocaleTimeString()}\n━━━━━━━━\nRED x3\n━━━━━━━━\n${debugState.events.join('\n')}`;
+      }
+      console.log('✅ WEBTV Debugger Ready!');
+    })();
+    </script>
+    
     <style>
         :root {
             --focus-color: #ffeb3b;
