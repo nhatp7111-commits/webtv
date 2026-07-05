@@ -13,6 +13,54 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@400;600;800&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
+    <!-- PHASE 1: DEBUG SCRIPT (OK BUTTON DEBUGGING) -->
+    <script>
+    (function initDebugger() {
+      const debugOverlay = document.createElement('div');
+      debugOverlay.id = 'webtv-debug-overlay';
+      debugOverlay.style.cssText = `position: fixed; top: 10px; left: 10px; width: 400px; height: 300px; background: rgba(0, 0, 0, 0.9); border: 2px solid #00ff00; color: #00ff00; font-family: monospace; font-size: 11px; padding: 10px; overflow-y: auto; z-index: 99999; white-space: pre-wrap; word-break: break-all; display: none;`;
+      document.body.appendChild(debugOverlay);
+      const debugState = { enabled: false, events: [], maxEvents: 20 };
+      let redButtonCount = 0, redButtonTimeout = null;
+      window.addEventListener('keydown', function(e) {
+        if (e.keyCode === 403 || e.key === 'Red' || e.key === 'ColorF0Red') {
+          redButtonCount++;
+          clearTimeout(redButtonTimeout);
+          if (redButtonCount === 3) {
+            debugState.enabled = !debugState.enabled;
+            debugOverlay.style.display = debugState.enabled ? 'block' : 'none';
+            addDebugLog(`DEBUG ${debugState.enabled ? 'ENABLED' : 'DISABLED'}`);
+            redButtonCount = 0;
+          }
+          redButtonTimeout = setTimeout(() => { redButtonCount = 0; }, 1000);
+        }
+      }, true);
+      window.addEventListener('keydown', function(e) {
+        if (!debugState.enabled) return;
+        let keyName = e.key || e.keyCode;
+        if (e.keyCode === 13 || e.key === 'Enter') keyName = '⭐ ENTER (13)';
+        if (e.keyCode === 29460) keyName = '⭐ ENTER (29460)';
+        if (e.key === 'OK') keyName = '⭐ OK';
+        if (e.keyCode === 461) keyName = '⭐ RED (461)';
+        addDebugLog(`[${new Date().toLocaleTimeString()}] KEY: ${keyName}\n  keyCode: ${e.keyCode}\n  target: ${e.target?.tagName}#${e.target?.id}\n  activeElement: ${document.activeElement?.tagName}#${document.activeElement?.id}`);
+        console.log('🔍 DEBUG:', { keyCode: e.keyCode, key: e.key, target: e.target?.tagName });
+      }, true);
+      let lastActiveElement = document.activeElement;
+      setInterval(() => {
+        if (document.activeElement !== lastActiveElement && debugState.enabled) {
+          lastActiveElement = document.activeElement;
+          addDebugLog(`FOCUS → ${lastActiveElement?.tagName}#${lastActiveElement?.id}`);
+        }
+      }, 100);
+      function addDebugLog(msg) {
+        debugState.events.push(msg);
+        if (debugState.events.length > debugState.maxEvents) debugState.events.shift();
+        debugOverlay.textContent = `WEBTV DEBUG\n${new Date().toLocaleTimeString()}\n━━━━━━━━\nRED x3\n━━━━━━━━\n${debugState.events.join('\n')}`;
+      }
+      console.log('✅ WEBTV Debugger Ready!');
+    })();
+    </script>
+    
     <style>
         :root {
             --focus-color: #ffeb3b;
@@ -133,6 +181,37 @@
             align-items: center;
             justify-content: space-between;
             margin-top: 15px;
+        }
+        
+        /* Hint chuyển kênh khi fullscreen */
+        .channel-hint {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+            padding: 10px 16px;
+            border-radius: 100px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+        }
+        .channel-hint i {
+            font-size: 11px;
+            color: var(--focus-color);
+            opacity: 0.7;
+        }
+        .channel-hint-sep {
+            opacity: 0.3;
+        }
+        .controls-overlay.hidden .channel-hint {
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         .btn {
@@ -260,9 +339,7 @@
             left: -320px; /* Ẩn ngoài màn hình */
             width: 320px;
             height: 100%;
-            background: rgba(15, 15, 20, 0.85);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
+            background: rgba(15, 15, 20, 0.92);
             border-right: 1px solid rgba(255, 255, 255, 0.15);
             z-index: 2100; /* đè trên controls-overlay (z-index 2000) và dưới modals (z-index 3000) */
             transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -341,9 +418,7 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            background: rgba(15, 15, 20, 0.85);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(15, 15, 20, 0.92);
             color: var(--focus-color);
             padding: 4px 10px;
             border-radius: 6px;
@@ -446,8 +521,7 @@
         .settings-modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.92);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -504,7 +578,7 @@
 
         /* --- CHỌN LINK DỰ PHÒNG KHI ĐANG XEM (HIỂN THỊ TRÊN OVERLAY) --- */
         .server-links-container-overlay {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.15);
             padding: 15px 25px;
             display: flex;
@@ -512,7 +586,6 @@
             justify-content: space-between;
             border-radius: 10px;
             margin-bottom: 20px;
-            backdrop-filter: blur(5px);
         }
         .server-links-text-overlay {
             color: #ccc;
@@ -615,7 +688,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            aspect-ratio: 2 / 3; /* Tỷ lệ khung dọc chuẩn phim ảnh */
+            min-height: 240px;
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 6px 20px rgba(0,0,0,0.4);
             transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
@@ -627,6 +700,13 @@
             background: rgba(255, 255, 255, 0.08) !important;
             transform: scale(1.06);
             box-shadow: 0 0 20px var(--focus-color);
+        }
+
+        @supports (aspect-ratio: 2 / 3) {
+            .channel-card {
+                aspect-ratio: 2 / 3;
+                min-height: 0;
+            }
         }
 
         .channel-card .img-container {
@@ -1080,30 +1160,166 @@
             box-shadow: 0 0 15px var(--focus-color);
         }
         .seek-toast {
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.88);
             color: #fff;
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-size: 20px;
+            padding: 28px 56px;
+            border-radius: 20px;
+            font-size: 3.5rem;
             font-family: 'Outfit', 'Inter', sans-serif;
-            font-weight: bold;
-            z-index: 20;
+            font-weight: 800;
+            z-index: 9999;
             display: flex;
             align-items: center;
             gap: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
             pointer-events: none;
             opacity: 0;
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            white-space: nowrap;
+            text-align: center;
+            letter-spacing: 1px;
         }
         .seek-toast.active {
             opacity: 1;
-            transform: translate(-50%, -50%) scale(1.05);
+            transform: translate(-50%, -50%) scale(1.08);
+        }
+        /* ==========================================
+           CHANNEL GUIDE OVERLAY (OK BUTTON)
+           ========================================== */
+        .channel-guide-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            z-index: 100;
+            padding: 40px 50px 50px 50px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .channel-guide-overlay.active {
+            display: block;
+        }
+        .guide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 0 5px;
+        }
+        .guide-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .guide-close-btn {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid transparent;
+            color: #aaa;
+            font-size: 28px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .guide-close-btn:focus, .guide-close-btn.focused {
+            background: var(--focus-color) !important;
+            color: #000 !important;
+            border-color: var(--focus-color);
+            transform: scale(1.1);
+            outline: none;
+        }
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+        .guide-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 20px 12px 16px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            min-height: 160px;
+            box-sizing: border-box;
+        }
+        .guide-item:focus, .guide-item.focused {
+            border-color: var(--focus-color) !important;
+            background: rgba(255, 235, 59, 0.15) !important;
+            transform: scale(1.06);
+            box-shadow: 0 0 25px var(--focus-color);
+            outline: none;
+        }
+        .guide-item:focus .guide-item-name, .guide-item.focused .guide-item-name {
+            color: #000;
+        }
+        .guide-item-img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: transparent;
+            margin-bottom: 10px;
+            pointer-events: none;
+        }
+        .guide-item-index {
+            position: absolute;
+            top: 8px;
+            left: 10px;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--focus-color);
+            font-family: 'Outfit', sans-serif;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .guide-item:focus .guide-item-index {
+            color: #000;
+            background: transparent;
+        }
+        .guide-item-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ddd;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            font-family: 'Outfit', sans-serif;
+            line-height: 1.3;
+        }
+        @media (max-width: 700px) {
+            .channel-guide-overlay { padding: 20px 15px; }
+            .guide-title { font-size: 20px; }
+            .guide-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+            .guide-item { min-height: 120px; padding: 12px 8px; }
+            .guide-item-img { width: 70px; height: 70px; }
+        }
+        @media (min-width: 1400px) {
+            .guide-grid { grid-template-columns: repeat(6, 1fr); }
         }
     </style>
 </head>
@@ -1208,6 +1424,21 @@
                     <button class="btn focusable" id="fullscreen-btn" tabindex="0"><i class="fas fa-expand"></i></button>
                 </div>
             </div>
+            <!-- Hint chuyển kênh bằng LEFT/RIGHT (cho TV fullscreen) -->
+            <div class="channel-hint" id="channel-hint">
+                <span><i class="fas fa-arrow-left"></i> <i class="fas fa-arrow-right"></i> Chuyển kênh</span>
+                <span class="channel-hint-sep">•</span>
+                <span><i class="fas fa-list-ul"></i> DS Kênh</span>
+            </div>
+        </div>
+
+        <!-- CHANNEL GUIDE OVERLAY FULLSCREEN -->
+        <div class="channel-guide-overlay" id="channel-guide-overlay">
+            <div class="guide-header">
+                <span class="guide-title"><i class="fas fa-list-ul" style="color:var(--focus-color)"></i> DANH SÁCH KÊNH</span>
+                <button class="guide-close-btn focusable" id="guide-close-btn" tabindex="0">✕</button>
+            </div>
+            <div class="guide-grid" id="guide-grid"></div>
         </div>
     </div>
 
@@ -1713,6 +1944,21 @@
             }
         }
 
+        // ====== PHÁT HIỆN NỀN TẢNG SMART TV ======
+        const IS_TIZEN = navigator.userAgent.includes('Tizen');
+        const IS_WEBOS = navigator.userAgent.includes('Web0S') || navigator.userAgent.includes('webOS');
+        const IS_SMART_TV = IS_TIZEN || IS_WEBOS;
+
+        function requestTVFullscreen(videoEl, wrapperEl) {
+            if (IS_WEBOS && videoEl && videoEl.webkitEnterFullscreen) {
+                videoEl.webkitEnterFullscreen();
+            } else if (wrapperEl && wrapperEl.requestFullscreen) {
+                wrapperEl.requestFullscreen();
+            } else if (wrapperEl && wrapperEl.webkitRequestFullscreen) {
+                wrapperEl.webkitRequestFullscreen();
+            }
+        }
+
         // ====== CẤU HÌNH BUFFER TỐI THIỂU CHO TV ======
         const TV_HLS_CONFIG = {
             maxBufferLength: 15,           // Giây buffer tối đa (mặc định 60-300s)
@@ -1721,7 +1967,7 @@
             liveSyncDurationCount: 2,
             liveMaxLatencyDurationCount: 5,
             backBufferLength: 10,          // Giữ 10s quá khứ, còn lại xóa
-            enableWorker: true,            // Giảm tải main thread
+            enableWorker: false,           // Tắt worker tránh crash RAM trên Smart TV
             fragLoadingMaxRetry: 4,
             manifestLoadingMaxRetry: 4,
             levelLoadingMaxRetry: 4,
@@ -2242,6 +2488,7 @@
         }
 
         function destroyPlayers() {
+            if (isGuideOpen) closeChannelGuide();
             destroyPlayersOnly();
 
             // Ẩn khung player và thoát fullscreen
@@ -2437,7 +2684,7 @@
             // Tự động yêu cầu Fullscreen nếu chưa ở Fullscreen
             try {
                 if (playerWrapper && !document.fullscreenElement) {
-                    await playerWrapper.requestFullscreen();
+                    requestTVFullscreen(video, playerWrapper);
                 }
             } catch (err) {
                 console.warn("Fullscreen request blocked: ", err);
@@ -2470,13 +2717,19 @@
                 const resolvedUrl = await resolveTV360Url(url);
                 if (resolvedUrl !== url) {
                     targetPlayUrl = resolvedUrl;
-                    forceDisableProxy = true;
+                    // Nếu CDN URL là HTTPS → không cần proxy (CORS OK)
+                    // Nếu CDN URL là HTTP → cần proxy (mixed content)
+                    if (targetPlayUrl.startsWith('https://')) {
+                        forceDisableProxy = true;
+                    }
                 }
             }
 
             let useProxy;
             if (forceDisableProxy) {
                 useProxy = false;
+            } else if (targetPlayUrl && !targetPlayUrl.startsWith('https://') && targetPlayUrl !== url) {
+                useProxy = true;
             } else {
                 useProxy = localStorage.getItem('cors_proxy') === 'on';
             }
@@ -3054,7 +3307,7 @@
         };
         
         document.getElementById('fullscreen-btn').onclick = () => {
-            if (!document.fullscreenElement) wrapper.requestFullscreen();
+            if (!document.fullscreenElement) requestTVFullscreen(video, wrapper);
             else document.exitFullscreen();
         };
 
@@ -3173,6 +3426,70 @@
             }, 5000);
         }
 
+        // ===== CHANNEL GUIDE OVERLAY =====
+        const channelGuideOverlay = document.getElementById('channel-guide-overlay');
+        let isGuideOpen = false;
+        let lastGuideOpenedFrom = null;
+
+        function openChannelGuide() {
+            if (isGuideOpen || !channelGuideOverlay) return;
+            lastGuideOpenedFrom = document.activeElement;
+            isGuideOpen = true;
+
+            const grid = document.getElementById('guide-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const listToRender = channels || [];
+            listToRender.forEach((ch, idx) => {
+                const item = document.createElement('div');
+                item.className = 'guide-item focusable';
+                item.tabIndex = 0;
+                item.dataset.index = idx;
+                item.innerHTML = `
+                    <span class="guide-item-index">${idx + 1}</span>
+                    <img class="guide-item-img" src="${ch.logo}" alt="${ch.name}" loading="lazy" onerror="this.style.display='none'">
+                    <span class="guide-item-name">${ch.name}</span>
+                `;
+                item.onclick = () => {
+                    closeChannelGuide();
+                    loadAndPlay(ch.url, ch.subtitle || ch.sub, ch.key || ch.drm);
+                };
+                grid.appendChild(item);
+            });
+
+            channelGuideOverlay.classList.add('active');
+            isCacheValid = false;
+
+            setTimeout(() => {
+                const items = grid.querySelectorAll('.guide-item');
+                if (items.length > 0) {
+                    let focusIdx = 0;
+                    if (currentVideoUrl) {
+                        const foundIdx = channels.findIndex(ch => ch.url === currentVideoUrl);
+                        if (foundIdx !== -1) focusIdx = foundIdx;
+                    }
+                    items[Math.min(focusIdx, items.length - 1)].focus();
+                } else {
+                    const closeBtn = document.getElementById('guide-close-btn');
+                    if (closeBtn) closeBtn.focus();
+                }
+            }, 100);
+        }
+
+        function closeChannelGuide() {
+            if (!isGuideOpen || !channelGuideOverlay) return;
+            isGuideOpen = false;
+            channelGuideOverlay.classList.remove('active');
+            isCacheValid = false;
+            if (lastGuideOpenedFrom && lastGuideOpenedFrom.isConnected) {
+                lastGuideOpenedFrom.focus();
+            } else {
+                wrapper.focus();
+            }
+            lastGuideOpenedFrom = null;
+        }
+
         function openExitModal() {
             lastExitModalOpenedFrom = document.activeElement;
             exitModal.classList.add('active');
@@ -3221,7 +3538,9 @@
         }
 
         function handleTVBackAction() {
-            if (isSidebarOpen) {
+            if (isGuideOpen) {
+                closeChannelGuide();
+            } else if (isSidebarOpen) {
                 closeChannelSidebar();
             } else if (modal.classList.contains('active')) {
                 closeSettingsModal();
@@ -3243,6 +3562,11 @@
         exitConfirmBtn.onclick = () => exitTVApp();
         if (sidebarToggleBtn) {
             sidebarToggleBtn.onclick = () => openChannelSidebar();
+        }
+
+        const guideCloseBtn = document.getElementById('guide-close-btn');
+        if (guideCloseBtn) {
+            guideCloseBtn.onclick = () => closeChannelGuide();
         }
 
         function openSettingsModal(triggerElement) {
@@ -3419,11 +3743,18 @@
                 });
             }
 
+            if (isGuideOpen && channelGuideOverlay) {
+                return Array.from(channelGuideOverlay.querySelectorAll('.focusable')).filter(el => {
+                    const style = window.getComputedStyle(el);
+                    return style.display !== 'none' && style.visibility !== 'hidden';
+                });
+            }
+
             const playerWrapper = document.getElementById('player-wrapper');
             const isPlayerActive = playerWrapper && playerWrapper.classList.contains('active');
 
             if (isPlayerActive) {
-                if (controlsOverlay.classList.contains('hidden')) {
+                if (controlsOverlay.classList.contains('hidden') && !isGuideOpen) {
                     return [];
                 }
                 return Array.from(playerWrapper.querySelectorAll('.focusable')).filter(el => {
@@ -3544,14 +3875,14 @@
             if (seekToastTimer) clearTimeout(seekToastTimer);
             seekToastTimer = setTimeout(() => {
                 seekToast.classList.remove('active');
-            }, 800);
+            }, 2000);
         }
 
         const KEY_CODES = {
             LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40,
             PLAY_PAUSE: 179, PLAY: 415, PAUSE: 19, STOP: 413,
             FAST_FORWARD: 417, REWIND: 412, CHANNEL_UP: 427, CHANNEL_DOWN: 428,
-            ENTER: 13, RETURN: 10009, BACK: 8, BACK_ANDROID: 4, ESCAPE: 27,
+            ENTER: 13, RETURN: 10009, WEBOS_BACK: 461, BACK: 8, BACK_ANDROID: 4, ESCAPE: 27,
             VOLUME_UP: 447, VOLUME_DOWN: 448, VOLUME_MUTE: 449,
             RED: 403, GREEN: 404, YELLOW: 405, BLUE: 406,
             GUIDE: 458, INFO: 457, MENU: 18
@@ -3593,7 +3924,7 @@
                 if (isSidebarOpen) {
                     resetSidebarAutoCloseTimer();
                     if (keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || 
-                        keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE) {
+                        keyCode === KEY_CODES.WEBOS_BACK || keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE) {
                         e.preventDefault();
                         e.stopPropagation();
                         closeChannelSidebar();
@@ -3624,8 +3955,8 @@
                 }
             }
 
-            // Xử lý tua nhanh/tua lui 10s khi ở chế độ player và không mở modal
-            if (isPlayerActive && !isModalActive && isSeekingKey) {
+            // Khi fullscreen: LEFT → kênh trước, RIGHT → kênh tiếp theo (thay vì seek)
+            if (isPlayerActive && !isModalActive && !isGuideOpen && isSeekingKey) {
                 const isControlsHidden = controlsOverlay.classList.contains('hidden');
                 const isNavigatingButtons = activeElement && 
                     (activeElement.tagName === 'BUTTON' || 
@@ -3639,13 +3970,21 @@
                 if (isControlsHidden || (!isNavigatingButtons && activeElement.id !== 'progress-area')) {
                     e.preventDefault();
                     resetTVIdleTimer();
-                    const seekAmount = 10;
+                    
+                    const currentIdx = channels.findIndex(ch => ch.url === currentVideoUrl);
+                    
                     if (keyCode === KEY_CODES.LEFT) {
-                        video.currentTime = Math.max(0, video.currentTime - seekAmount);
-                        showSeekToast("« Tua lại 10s");
+                        // Prev channel (vòng quanh)
+                        const prevIdx = currentIdx > 0 ? currentIdx - 1 : channels.length - 1;
+                        const targetCh = channels[prevIdx];
+                        showSeekToast(`« ${targetCh.name}`);
+                        loadAndPlay(targetCh.url, targetCh.subtitle || targetCh.sub, targetCh.key || targetCh.drm);
                     } else {
-                        video.currentTime = Math.min(video.duration || Infinity, video.currentTime + seekAmount);
-                        showSeekToast("Tua đi 10s »");
+                        // Next channel (vòng quanh)
+                        const nextIdx = currentIdx < channels.length - 1 ? currentIdx + 1 : 0;
+                        const targetCh = channels[nextIdx];
+                        showSeekToast(`${targetCh.name} »`);
+                        loadAndPlay(targetCh.url, targetCh.subtitle || targetCh.sub, targetCh.key || targetCh.drm);
                     }
                     return;
                 }
@@ -3662,7 +4001,7 @@
                     }
                     return;
                 }
-                if (keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE) {
+                if (keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.WEBOS_BACK || keyCode === KEY_CODES.BACK_ANDROID || keyCode === KEY_CODES.ESCAPE) {
                     e.preventDefault();
                     currentPinText = "";
                     pinInput.value = "";
@@ -3707,7 +4046,7 @@
             }
 
             // ========== 1. XỬ LÝ PHÍM SỐ (0-9) ĐỂ CHUYỂN KÊNH NHANH ==========
-            if (keyCode >= 48 && keyCode <= 57 && !isInputActive) {
+            if (!isGuideOpen && keyCode >= 48 && keyCode <= 57 && !isInputActive) {
                 e.preventDefault();
                 resetTVIdleTimer();
                 
@@ -3716,6 +4055,12 @@
                 showSeekToast(`Nhập số kênh: ${channelNumberBuffer}`);
                 
                 clearTimeout(channelNumberTimeout);
+                
+                // Adaptive timeout: 1500ms nếu có thể mở rộng thành 2 số (vd: 1→10-19), 800ms nếu không
+                const canBeExtended = (channelNumberBuffer.length === 1 && 
+                    parseInt(channelNumberBuffer, 10) * 10 <= channels.length);
+                const timeoutDelay = canBeExtended ? 1500 : 800;
+                
                 channelNumberTimeout = setTimeout(() => {
                     const targetChNum = parseInt(channelNumberBuffer, 10);
                     const chIndex = targetChNum - 1; // 1-based index sang 0-based index
@@ -3732,15 +4077,11 @@
                         showSeekToast(`Kênh số ${channelNumberBuffer} không tồn tại`);
                     }
                     channelNumberBuffer = "";
-                }, 1000);
+                }, timeoutDelay);
                 return;
             }
 
-            // Hủy bộ đệm phím số nếu người dùng bấm bất kỳ phím nào khác (trừ Enter để xác nhận nhanh)
-            if (channelNumberBuffer !== "" && keyCode !== KEY_CODES.ENTER) {
-                clearTimeout(channelNumberTimeout);
-                channelNumberBuffer = "";
-            }
+
 
             // Xác nhận nhanh bằng phím Enter khi có bộ đệm số
             if (keyCode === KEY_CODES.ENTER && channelNumberBuffer !== "") {
@@ -3767,7 +4108,7 @@
             }
 
             // ========== 2. XỬ LÝ PHÍM LÊN/XUỐNG ĐỂ LƯỚT KÊNH KHI ẨN MENU ==========
-            if (isPlayerActive && !isModalActive) {
+            if (isPlayerActive && !isModalActive && !isGuideOpen) {
                 const isControlsHidden = controlsOverlay.classList.contains('hidden');
                 if (isControlsHidden && (keyCode === KEY_CODES.UP || keyCode === KEY_CODES.DOWN)) {
                     e.preventDefault();
@@ -3802,7 +4143,7 @@
             if (modal.classList.contains('active')) {
                 const isInputActive = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
 
-                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.BACK_ANDROID || (keyCode === KEY_CODES.BACK && !isInputActive)) {
+                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.WEBOS_BACK || keyCode === KEY_CODES.BACK_ANDROID || (keyCode === KEY_CODES.BACK && !isInputActive)) {
                     e.preventDefault();
                     document.getElementById('close-modal-btn').click();
                     return;
@@ -3835,7 +4176,7 @@
 
             // Xử lý phím trong Cast Modal
             if (castModal.classList.contains('active')) {
-                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.BACK_ANDROID) {
+                if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.WEBOS_BACK || keyCode === KEY_CODES.BACK_ANDROID) {
                     e.preventDefault();
                     closeCastBtn.click();
                     return;
@@ -3885,6 +4226,7 @@
                     video.currentTime = Math.max(0, video.currentTime - 30);
                     return;
                 case KEY_CODES.CHANNEL_UP:
+                    if (isGuideOpen) return;
                     e.preventDefault();
                     const currentUrl = video.src || (hls && hls.url);
                     const currentIndex = channels.findIndex(ch => ch.url === currentUrl);
@@ -3897,6 +4239,7 @@
                     }
                     return;
                 case KEY_CODES.CHANNEL_DOWN:
+                    if (isGuideOpen) return;
                     e.preventDefault();
                     const currentUrlDown = video.src || (hls && hls.url);
                     const currentIdx = channels.findIndex(ch => ch.url === currentUrlDown);
@@ -3922,6 +4265,7 @@
                     return;
                 case KEY_CODES.BACK:
                 case KEY_CODES.RETURN:
+                case KEY_CODES.WEBOS_BACK:
                 case KEY_CODES.BACK_ANDROID:
                 case KEY_CODES.ESCAPE:
                     e.preventDefault();
@@ -3967,11 +4311,56 @@
                 return;
             }
 
+            // ENTER/OK: Redesigned with priority tree to prevent fullscreen conflict
             if (keyCode === KEY_CODES.ENTER) {
                 e.preventDefault();
-                if (activeElement && activeElement !== document.body) {
+                e.stopPropagation();
+                
+                // Priority 1: Modal đang active → đóng modal hoặc xử lý modal
+                const isModalActive = modal.classList.contains('active') || 
+                                      castModal.classList.contains('active') || 
+                                      (exitModal && exitModal.classList.contains('active'));
+                if (isModalActive) {
+                    if (activeElement && activeElement !== document.body) {
+                        activeElement.click();
+                    }
+                    return;
+                }
+                
+                // Priority 2: Guide đang mở → xử lý guide
+                if (isGuideOpen) {
+                    if (activeElement && activeElement !== document.body && activeElement !== wrapper) {
+                        activeElement.click();
+                    }
+                    return;
+                }
+                
+                // Priority 3: Sidebar đang mở → xử lý sidebar
+                if (isSidebarOpen) {
+                    if (activeElement && activeElement !== document.body && activeElement !== wrapper) {
+                        activeElement.click();
+                    }
+                    return;
+                }
+                
+                // Priority 4: Player mode active → LUÔN mở guide (không cho click) ✅ FIX
+                if (isPlayerActive) {
+                    openChannelGuide();
+                    return;
+                }
+                
+                // Priority 5: Default → click element nếu hợp lệ
+                const isValidClickTarget = activeElement && 
+                                           activeElement !== document.body && 
+                                           activeElement !== wrapper &&
+                                           (activeElement.tagName === 'BUTTON' || 
+                                            activeElement.classList.contains('btn') ||
+                                            activeElement.id === 'progress-area');
+                
+                if (isValidClickTarget) {
                     activeElement.click();
                 }
+                
                 return;
             }
         });
