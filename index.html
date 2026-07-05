@@ -3951,9 +3951,8 @@
                 
                 clearTimeout(channelNumberTimeout);
                 
-                const canBeExtended = (channelNumberBuffer.length === 1 && 
-                    parseInt(channelNumberBuffer, 10) * 10 <= channels.length);
-                const timeoutDelay = canBeExtended ? 1500 : 800;
+                // FIX LỖI NHẢY KÊNH: Cố định thời gian chờ là 2.5 giây (2500ms) để người dùng thoải mái bấm số
+                const timeoutDelay = 2500; 
                 
                 channelNumberTimeout = setTimeout(() => {
                     const targetChNum = parseInt(channelNumberBuffer, 10);
