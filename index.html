@@ -13,7 +13,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@400;600;800&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- PHASE 1: DEBUG SCRIPT (OK BUTTON DEBUGGING) -->
     <script>
     (function initDebugger() {
       const debugOverlay = document.createElement('div');
@@ -92,7 +91,7 @@
             -webkit-user-select: none;
         }
 
-        /* --- STYLE FOCUS TỐI ƯU CHO TV (Bỏ box-shadow tránh lag GPU) --- */
+        /* --- STYLE FOCUS TỐI ƯU CHO TV --- */
         [tabindex="0"], .focusable {
             outline: none;
         }
@@ -118,7 +117,7 @@
             box-sizing: border-box;
         }
 
-        /* --- KHUNG PLAYER TOÀN MÀN HÌNH (OVERLAY FULLSCREEN) --- */
+        /* --- KHUNG PLAYER TOÀN MÀN HÌNH --- */
         .player-wrapper {
             position: fixed;
             top: 0;
@@ -126,8 +125,8 @@
             width: 100vw;
             height: 100vh;
             background-color: #000;
-            z-index: 2000; /* đè lên tất cả, kể cả header, settings */
-            display: none; /* ẩn mặc định */
+            z-index: 2000;
+            display: none;
             overflow: hidden;
         }
         .player-wrapper.active {
@@ -142,11 +141,11 @@
             width: 100%;
             height: 100%;
             display: block;
-            object-fit: contain; /* Giữ tỷ lệ chuẩn, tránh móp méo hình */
+            object-fit: contain;
             z-index: 1;
         }
 
-        /* --- CUSTOM STYLE CHO CUE PHỤ ĐỀ (NATIVE TRÊN TV) --- */
+        /* --- CUSTOM STYLE CHO CUE PHỤ ĐỀ --- */
         video::cue {
             color: var(--sub-color, #ffeb3b) !important;
             font-size: var(--sub-size, 65px) !important;
@@ -192,8 +191,7 @@
             margin-top: 20px;
             padding: 10px 16px;
             border-radius: 100px;
-            /* Tăng độ đậm của nền để bù lại việc bỏ hiệu ứng kính mờ */
-            background: rgba(20, 20, 20, 0.85); 
+            background: rgba(20, 20, 20, 0.85); /* Tối ưu GPU */
             border: 1px solid rgba(255,255,255,0.15);
             font-size: 13px;
             color: rgba(255,255,255,0.7);
@@ -237,15 +235,14 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* --- PROGRESS BAR (Premium Glass & Glow) --- */
+        /* --- PROGRESS BAR --- */
         .progress-area {
-            height: 36px; /* Tăng từ 24px lên 36px để vùng click/chạm cực kỳ rộng rãi */
+            height: 36px;
             position: relative;
             cursor: pointer;
             display: flex;
             align-items: center;
         }
-        /* Ghi đè triệt để lớp .focusable:focus chung để không bị viền vàng và hộp xám thô kệch */
         .progress-area:focus {
             outline: none !important;
             transform: none !important;
@@ -257,20 +254,20 @@
             position: absolute;
             left: 0;
             right: 0;
-            height: 8px; /* Tăng độ dày mặc định lên 8px */
+            height: 8px;
             background: rgba(255, 255, 255, 0.12);
             border-radius: 4px;
             transition: height 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease;
         }
         .progress-area:hover::before,
         .progress-area:focus::before {
-            height: 12px; /* Tăng độ dày khi tương tác lên 12px */
+            height: 12px;
             background: rgba(255, 255, 255, 0.22);
         }
         .progress-filled {
             position: absolute;
             left: 0;
-            height: 8px; /* Tương thích 8px mặc định */
+            height: 8px;
             background: linear-gradient(90deg, var(--primary-red) 0%, #ff4d4d 50%, var(--primary-red) 100%);
             background-size: 200% 100%;
             width: 0%;
@@ -281,19 +278,18 @@
         }
         .progress-area:hover .progress-filled,
         .progress-area:focus .progress-filled {
-            height: 12px; /* Tương thích 12px khi tương tác */
+            height: 12px;
         }
         .progress-area:focus .progress-filled {
             animation: progressShimmer 2s infinite linear;
         }
-        /* Nút tròn định vị (Seek Thumb) lớn hơn */
         .progress-filled::after {
             content: '';
             position: absolute;
-            right: -9px; /* Căn giữa hoàn hảo cho nút 18px */
+            right: -9px;
             top: 50%;
             transform: translateY(-50%) scale(0);
-            width: 18px; /* Tăng kích thước từ 14px lên 18px */
+            width: 18px;
             height: 18px;
             background: #ffffff;
             border-radius: 50%;
@@ -305,16 +301,14 @@
         .progress-area:hover .progress-filled::after {
             transform: translateY(-50%) scale(1);
         }
-        /* TV Focus: Nút định vị to 22.5px (scale 1.25) và hào quang rộng màu vàng lung linh */
         .progress-area:focus .progress-filled::after {
             transform: translateY(-50%) scale(1.25);
             border: 2.5px solid var(--focus-color);
             box-shadow: 
-                0 0 0 4px rgba(255, 235, 59, 0.25), /* Vòng sáng ngoài rộng hơn */
-                0 0 16px var(--focus-color),         /* Hào quang trung tâm */
-                0 2px 6px rgba(0, 0, 0, 0.5);        /* Bóng đổ */
+                0 0 0 4px rgba(255, 235, 59, 0.25),
+                0 0 16px var(--focus-color),
+                0 2px 6px rgba(0, 0, 0, 0.5);
         }
-        /* Hiệu ứng bấm nút bấm vật lý (Active State) */
         .progress-area:active::before {
             height: 14px;
             background: rgba(255, 255, 255, 0.3);
@@ -332,16 +326,16 @@
             100% { background-position: -200% 0; }
         }
 
-        /* --- SIDEBAR DANH SÁCH KÊNH KHI XEM VIDEO (FULLSCREEN) --- */
+        /* --- SIDEBAR DANH SÁCH KÊNH KHI XEM VIDEO --- */
         .channel-sidebar {
             position: absolute;
             top: 0;
-            left: -320px; /* Ẩn ngoài màn hình */
+            left: -320px;
             width: 320px;
             height: 100%;
             background: rgba(15, 15, 20, 0.92);
             border-right: 1px solid rgba(255, 255, 255, 0.15);
-            z-index: 2100; /* đè trên controls-overlay (z-index 2000) và dưới modals (z-index 3000) */
+            z-index: 2100;
             transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             padding: 25px 15px;
             display: flex;
@@ -413,7 +407,7 @@
             font-family: 'Outfit', sans-serif;
         }
 
-        /* --- SỐ THỨ TỰ KÊNH (CHANNEL NUMBERING) --- */
+        /* --- SỐ THỨ TỰ KÊNH --- */
         .ch-number-badge {
             position: absolute;
             top: 10px;
@@ -450,7 +444,7 @@
             color: #000 !important;
         }
 
-        /* --- GIAO DIỆN TÙY CHỈNH PHỤ ĐỀ MỚI --- */
+        /* --- GIAO DIỆN TÙY CHỈNH PHỤ ĐỀ --- */
         .subtitle-size-control {
             display: flex;
             align-items: center;
@@ -528,7 +522,7 @@
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s, visibility 0.3s;
-            z-index: 3000; /* cao hơn player-wrapper */
+            z-index: 3000;
         }
         .settings-modal-overlay.active {
             opacity: 1;
@@ -574,45 +568,6 @@
         }
         .setting-group select:focus {
             border-color: var(--focus-color);
-        }
-
-        /* --- CHỌN LINK DỰ PHÒNG KHI ĐANG XEM (HIỂN THỊ TRÊN OVERLAY) --- */
-        .server-links-container-overlay {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 15px 25px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .server-links-text-overlay {
-            color: #ccc;
-            font-size: 18px;
-            font-weight: 600;
-        }
-        .server-links-overlay {
-            display: flex;
-            gap: 15px;
-        }
-        .link-btn {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 10px 25px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.2s;
-        }
-        .link-btn:focus {
-            background: var(--focus-color) !important;
-            color: #000 !important;
-            border-color: var(--focus-color) !important;
-            transform: scale(1.08);
-            box-shadow: 0 0 15px var(--focus-color);
         }
 
         /* --- PREMIUM TV HEADER --- */
@@ -690,16 +645,18 @@
             flex-direction: column;
             min-height: 240px;
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
             transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
             cursor: pointer;
         }
         
+        /* Tối ưu GPU TV: Dùng Outline thay cho Box-shadow */
         .channel-card:focus {
             border-color: var(--focus-color) !important;
             background: rgba(255, 255, 255, 0.08) !important;
             transform: scale(1.06);
-            box-shadow: 0 0 20px var(--focus-color);
+            outline: 4px solid var(--focus-color) !important;
+            outline-offset: -4px;
+            will-change: transform;
         }
 
         @supports (aspect-ratio: 2 / 3) {
@@ -711,7 +668,7 @@
 
         .channel-card .img-container {
             width: 100%;
-            height: 75%; /* Chiếm 75% chiều cao card */
+            height: 75%;
             flex-shrink: 0;
             display: flex;
             align-items: center;
@@ -720,31 +677,28 @@
             overflow: hidden;
         }
 
-        /* --- KIỂU PHIM ẢNH (Movie Card): Ảnh phủ kín tràn viền --- */
         .movie-card .img-container {
             background: #000;
         }
         .movie-card img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Phủ kín khung, cắt viền thừa tự nhiên */
+            object-fit: cover;
         }
 
-        /* --- KIỂU TRUYỀN HÌNH (TV Card): Logo thu gọn ở giữa có padding --- */
         .tv-card .img-container {
             background: rgba(255, 255, 255, 0.01);
-            padding: 20px; /* Thụt lề để logo không bị dính sát mép */
+            padding: 20px;
         }
         .tv-card img {
             max-width: 100%;
             max-height: 100%;
-            object-fit: contain; /* Co nhỏ ôm gọn không mất chi tiết logo */
+            object-fit: contain;
             object-position: center;
         }
 
-        /* --- PHẦN TÊN KÊNH / PHIM Ở ĐÁY THẺ --- */
         .channel-card .ch-name {
-            height: 25%; /* Chiếm 25% chiều cao card */
+            height: 25%;
             min-height: 0;
             display: flex;
             align-items: center;
@@ -757,29 +711,25 @@
             line-height: 1.3;
             background: #1c1c1c;
             border-top: 1px solid rgba(255, 255, 255, 0.05);
-            
-            /* Tự động viết gọn nếu tên quá dài (tối đa 2 dòng) */
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
 
-        /* Tối ưu hóa cho Smart TV & Màn hình lớn (min-width: 1200px) */
         @media (min-width: 1200px) {
             .channel-grid {
                 grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
                 gap: 30px;
             }
             .channel-card .ch-name {
-                font-size: 17px; /* Chữ to rõ hơn trên TV */
+                font-size: 17px;
             }
         }
 
-        /* Tối ưu hóa cho Điện thoại di động (max-width: 576px) */
         @media (max-width: 576px) {
             .channel-grid {
-                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); /* Chia nhiều cột nhỏ hơn */
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
                 gap: 15px;
             }
             .channel-card .ch-name {
@@ -787,11 +737,10 @@
                 padding: 6px 8px;
             }
             .tv-card .img-container {
-                padding: 12px; /* Giảm bớt padding của logo TV trên điện thoại */
+                padding: 12px;
             }
         }
 
-        /* Loading indicator */
         .loading-indicator {
             position: absolute;
             top: 50%;
@@ -831,7 +780,7 @@
         }
 
         /* ==========================================
-           CSS GIAO DIỆN MOBILE REMOTE (Netflix Style)
+           CSS GIAO DIỆN MOBILE REMOTE
            ========================================== */
         #app-remote {
             max-width: 480px;
@@ -1025,9 +974,9 @@
             transform: scale(0.95);
         }
 
-        /* --- ĐỘ PHÂN GIẢI TRÊN THANH PLAYER (Đỏ) --- */
+        /* --- ĐỘ PHÂN GIẢI TRÊN THANH PLAYER --- */
         #quality-setting-group {
-            display: none; /* Sẽ được đổi thành inline-flex bởi JS khi có dữ liệu */
+            display: none;
             align-items: center;
             background: rgba(229, 9, 20, 0.15);
             border: 2px solid var(--primary-red);
@@ -1063,7 +1012,7 @@
             color: #fff;
         }
 
-        /* --- CÁC BỘ CHỌN KHÁC TRÊN THANH PLAYER (Xám cao cấp) --- */
+        /* --- CÁC BỘ CHỌN KHÁC TRÊN THANH PLAYER --- */
         .player-control-group {
             display: inline-flex;
             align-items: center;
@@ -1101,7 +1050,6 @@
             color: #fff;
         }
 
-        /* --- THU GỌN NÚT PLAYER LINK --- */
         #cast-toggle-btn {
             font-size: 16px !important;
             font-weight: bold;
@@ -1189,7 +1137,7 @@
             transform: translate(-50%, -50%) scale(1.08);
         }
         /* ==========================================
-           CHANNEL GUIDE OVERLAY (OK BUTTON)
+           CHANNEL GUIDE OVERLAY
            ========================================== */
         .channel-guide-overlay {
             display: none;
@@ -1264,13 +1212,17 @@
             min-height: 160px;
             box-sizing: border-box;
         }
+        
+        /* Tối ưu GPU TV: Dùng Outline thay cho Box-shadow */
         .guide-item:focus, .guide-item.focused {
             border-color: var(--focus-color) !important;
             background: rgba(255, 235, 59, 0.15) !important;
             transform: scale(1.06);
-            box-shadow: 0 0 25px var(--focus-color);
-            outline: none;
+            outline: 4px solid var(--focus-color) !important;
+            outline-offset: -4px;
+            will-change: transform;
         }
+        
         .guide-item:focus .guide-item-name, .guide-item.focused .guide-item-name {
             color: #000;
         }
@@ -1325,7 +1277,6 @@
 </head>
 <body>
 
-<!-- MÀN HÌNH KHÓA PIN TV (PIN OVERLAY) -->
 <div id="pin-overlay" style="position: fixed; inset: 0; background: #0f0f0f; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;">
     <h2 style="color: var(--primary-red); font-size: 32px; margin-bottom: 20px;"><i class="fas fa-lock"></i> MÃ PIN BẢO MẬT</h2>
     <p style="color: #aaa; font-size: 18px; margin-bottom: 30px;">Vui lòng nhập mã PIN để truy cập hệ thống</p>
@@ -1349,9 +1300,7 @@
     <div id="pin-error" style="color: #e74c3c; font-size: 18px; height: 20px; font-weight: bold;"></div>
 </div>
 
-<!-- CHẾ ĐỘ PHÁT TRÊN TV (PLAYER MODE) -->
 <div class="main-app" id="app-player">
-    <!-- TIÊU ĐỀ HEADER MÀN HÌNH CHÍNH GIỐNG APP CHÍNH THỐNG -->
     <div class="tv-header">
         <div class="tv-logo"><i class="fas fa-play-circle" style="color: var(--primary-red);"></i> WEBTV</div>
         <div class="tv-header-actions">
@@ -1360,15 +1309,13 @@
         </div>
     </div>
 
-    <!-- KHUNG PLAYER TOÀN MÀN HÌNH (ẨN MẶC ĐỊNH) -->
     <div class="player-wrapper" id="player-wrapper" title="Nhấn OK để toàn màn hình">
-        <video id="main-video" crossorigin="anonymous"></video>
+        <video id="main-video" playsinline webkit-playsinline crossorigin="anonymous"></video>
         <div class="loading-indicator" id="loading-indicator">
             <i class="fas fa-spinner fa-spin"></i> Đang tải luồng...
         </div>
         <div class="seek-toast" id="seek-toast"></div>
         
-        <!-- Sidebar Danh sách Kênh nhanh -->
         <div class="channel-sidebar" id="channel-sidebar">
             <div class="sidebar-header">
                 <i class="fas fa-list-ul" style="color: var(--focus-color);"></i> Danh Sách Kênh
@@ -1376,10 +1323,7 @@
             <div class="sidebar-list" id="sidebar-list"></div>
         </div>
 
-        <!-- Toast chuyển kênh nhanh (Zapping) -->
         <div class="controls-overlay" id="controls-overlay">
-
-
             <div class="progress-area focusable" id="progress-area" tabindex="0">
                 <div class="progress-filled" id="progress-filled"></div>
             </div>
@@ -1424,7 +1368,6 @@
                     <button class="btn focusable" id="fullscreen-btn" tabindex="0"><i class="fas fa-expand"></i></button>
                 </div>
             </div>
-            <!-- Hint chuyển kênh bằng LEFT/RIGHT (cho TV fullscreen) -->
             <div class="channel-hint" id="channel-hint">
                 <span><i class="fas fa-arrow-left"></i> <i class="fas fa-arrow-right"></i> Chuyển kênh</span>
                 <span class="channel-hint-sep">•</span>
@@ -1432,7 +1375,6 @@
             </div>
         </div>
 
-        <!-- CHANNEL GUIDE OVERLAY FULLSCREEN -->
         <div class="channel-guide-overlay" id="channel-guide-overlay">
             <div class="guide-header">
                 <span class="guide-title"><i class="fas fa-list-ul" style="color:var(--focus-color)"></i> DANH SÁCH KÊNH</span>
@@ -1442,10 +1384,8 @@
         </div>
     </div>
 
-    <!-- THANH CHỌN DANH MỤC ĐỘNG -->
     <div class="tv-tabs" id="tv-tabs"></div>
 
-    <!-- DANH SÁCH KÊNH TV -->
     <div class="channel-section">
         <div class="section-title">Danh Sách Kênh</div>
         <div class="channel-grid" id="channel-grid">
@@ -1453,7 +1393,6 @@
     </div>
 </div>
 
-<!-- Modal Cài đặt Player & Phụ đề (Đặt ở ngoài body để đè lên mọi thứ) -->
 <div class="settings-modal-overlay" id="settings-modal-overlay">
     <div class="settings-modal">
         <h3>Cài đặt Player</h3>
@@ -1531,7 +1470,6 @@
     </div>
 </div>
 
-<!-- Modal Quét Mã QR để Cast (Đặt ở ngoài body) -->
 <div class="settings-modal-overlay" id="cast-modal-overlay">
     <div class="settings-modal" style="text-align: center; width: 450px;">
         <h3 style="margin-bottom: 20px;"><i class="fas fa-tv"></i> Kết nối điện thoại</h3>
@@ -1545,7 +1483,6 @@
     </div>
 </div>
 
-<!-- Modal Xác nhận Thoát Ứng dụng -->
 <div class="settings-modal-overlay" id="exit-modal-overlay">
     <div class="settings-modal" style="text-align: center; width: 450px;">
         <h3 style="margin-bottom: 20px;"><i class="fas fa-sign-out-alt"></i> Thoát Ứng Dụng</h3>
@@ -1559,14 +1496,12 @@
     </div>
 </div>
 
-<!-- CHẾ ĐỘ ĐIỀU KHIỂN TRÊN ĐIỆN THOẠI (REMOTE MODE) -->
 <div id="app-remote" style="display: none;">
     <div class="remote-card">
         <div class="remote-title"><i class="fas fa-tv"></i> Smart TV Remote</div>
         <div class="remote-status" id="remote-room-title">Đang kết nối...</div>
         
         <input type="text" class="remote-input" id="remote-input-url" placeholder="Dán link video (.m3u8, .mp4, ...)">
-        <!-- Input phụ đề di động -->
         <input type="text" class="remote-input" id="remote-input-sub" placeholder="Dán link phụ đề (.vtt, .srt) (Tùy chọn)" style="margin-top: 10px;">
         
         <button class="remote-btn-cast" id="remote-btn-cast">
@@ -1590,8 +1525,7 @@
         <div class="remote-channels-section">
             <div class="remote-dpad-title">Danh sách kênh TV</div>
             <div class="remote-channels-grid" id="remote-channels-grid">
-                <!-- Danh sách kênh hiển thị trên điện thoại -->
-            </div>
+                </div>
         </div>
     </div>
 </div>
@@ -1658,7 +1592,7 @@
         return false;
     }
 
-    // Hàm tải danh sách kênh động từ GitHub (Phiên bản nâng cấp chống Cache, CORS-safe & Tự phục hồi)
+    // Hàm tải danh sách kênh động từ GitHub
     async function fetchDynamicChannels(pin) {
         if (cachedEncryptedData && pin) {
             return decryptAndLoad(cachedEncryptedData, pin);
@@ -1666,7 +1600,7 @@
 
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // Timeout 8 giây
+            const timeoutId = setTimeout(() => controller.abort(), 8000); 
             
             const token = localStorage.getItem('github_token') || '';
             const antiCacheParams = `_ts=${Date.now()}&_r=${Math.random().toString(36).substring(2, 10)}`;
@@ -1687,7 +1621,6 @@
             let fetchSuccess = false;
             
             try {
-                // Lớp 2: Thiết lập cache: 'no-store' (CORS-safe)
                 response = await fetch(url, { 
                     signal: controller.signal,
                     headers: headers,
@@ -1704,9 +1637,6 @@
                 }
             }
 
-            // TỰ PHỤC HỒI:
-            // TH1: Lỗi kết nối khi dùng token (fetchSuccess === false và useToken đã chuyển thành false)
-            // TH2: Fetch thành công nhưng token bị lỗi xác thực hoặc giới hạn (401/403)
             if (!fetchSuccess || (useToken && (response.status === 401 || response.status === 403))) {
                 console.warn(`Đang tự phục hồi bằng link công khai...`);
                 const publicUrl = CHANNELS_JSON_URL + (CHANNELS_JSON_URL.includes('?') ? '&' : '?') + antiCacheParams;
@@ -1721,10 +1651,9 @@
             if (response && response.ok) {
                 const encryptedText = (await response.text()).trim();
                 
-                // XÁC THỰC DỮ LIỆU: CryptoJS AES luôn bắt đầu bằng "U2FsdGVkX1"
                 if (encryptedText.startsWith("U2FsdGVkX1")) {
                     cachedEncryptedData = encryptedText;
-                    localStorage.setItem('cached_channels_enc', cachedEncryptedData); // Chỉ lưu cache khi dữ liệu hợp lệ
+                    localStorage.setItem('cached_channels_enc', cachedEncryptedData);
                     console.log("✅ Tải danh sách kênh online thành công.");
                     
                     if (pin) {
@@ -1740,7 +1669,6 @@
             console.warn("⚠️ Không thể tải cấu hình kênh online. Thử dùng dữ liệu offline.", err);
             const offlineData = localStorage.getItem('cached_channels_enc');
             
-            // Chỉ sử dụng dữ liệu offline nếu nó hợp lệ
             if (offlineData && offlineData.trim().startsWith("U2FsdGVkX1")) {
                 cachedEncryptedData = offlineData;
                 if (pin) {
@@ -1759,16 +1687,13 @@
     let roomID = urlParams.get('room');
 
     if (mode === 'remote' && roomID) {
-        // 1. Tải dữ liệu mã hóa trước
         fetchDynamicChannels().then(async () => {
-            // 2. Thử tự động giải mã bằng PIN đã lưu
             let savedPin = localStorage.getItem('app_pin') || '';
             let decryptSuccess = false;
             if (savedPin) {
                 decryptSuccess = decryptAndLoad(cachedEncryptedData, savedPin);
             }
 
-            // 3. Nếu chưa giải mã được, yêu cầu nhập PIN bằng prompt
             while (!decryptSuccess) {
                 const entered = prompt("Vui lòng nhập mã PIN bảo mật để mở khóa Remote:");
                 if (entered === null) {
@@ -1805,7 +1730,6 @@
         const inputSub = document.getElementById('remote-input-sub');
         const btnCast = document.getElementById('remote-btn-cast');
 
-        // Gửi lệnh sang tivi qua API POST của ntfy.sh
         const sendSignal = (msg) => {
             fetch(NTFY_SERVER + roomID, {
                 method: 'POST',
@@ -1817,7 +1741,6 @@
             const url = inputUrl.value.trim();
             const sub = inputSub.value.trim();
             if (url) {
-                // Định dạng gói tin cast: link_video|link_phu_de
                 const msg = sub ? `${url}|${sub}` : url;
                 sendSignal(msg);
                 inputUrl.value = "";
@@ -1826,7 +1749,6 @@
             }
         };
 
-        // Render các kênh có sẵn lên remote điện thoại để bấm nhanh
         const remoteChannelGrid = document.getElementById('remote-channels-grid');
         remoteChannelGrid.innerHTML = '';
         channels.forEach(ch => {
@@ -1842,7 +1764,6 @@
             remoteChannelGrid.appendChild(btn);
         });
 
-        // Đăng ký sự kiện các nút remote
         document.getElementById('remote-play-pause').onclick = () => sendSignal('cmd:play');
         document.getElementById('remote-mute').onclick = () => sendSignal('cmd:mute');
         document.getElementById('remote-vol-up').onclick = () => sendSignal('cmd:volup');
@@ -1860,7 +1781,6 @@
         const wrapper = document.getElementById('player-wrapper');
         const controlsOverlay = document.getElementById('controls-overlay');
         
-        // Modals
         const modal = document.getElementById('settings-modal-overlay');
         const castModal = document.getElementById('cast-modal-overlay');
         const exitModal = document.getElementById('exit-modal-overlay');
@@ -1871,7 +1791,6 @@
         
         const loadingIndicator = document.getElementById('loading-indicator');
 
-        // Sidebar
         const channelSidebar = document.getElementById('channel-sidebar');
         const sidebarList = document.getElementById('sidebar-list');
         const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
@@ -1884,12 +1803,10 @@
         const closeCastBtn = document.getElementById('close-cast-btn');
         const castQrImage = document.getElementById('cast-qr-image');
 
-        // Mật khẩu PIN và dữ liệu nhập
         const pinInput = document.getElementById('pin-input');
         const pinError = document.getElementById('pin-error');
         let currentPinText = "";
 
-        // Elements cấu hình phụ đề
         const subFontSelect = document.getElementById('sub-font-select');
         const subShadowSelect = document.getElementById('sub-shadow-select');
         const subBgSelect = document.getElementById('sub-bg-select');
@@ -1902,26 +1819,22 @@
         let channelNumberBuffer = "";
         let channelNumberTimeout = null;
         
-        // Hàm lọc thông minh: Chỉ proxy các nguồn thiếu CORS, bỏ qua CDN hỗ trợ CORS gốc có khóa IP
         function shouldProxyUrl(url) {
             if (!url || typeof url !== 'string') return false;
             if (url.startsWith('https://corsproxy.io/')) return false;
 
             try {
                 const hostname = new URL(url).hostname.toLowerCase();
-                // Danh sách các đuôi domain/CDN lớn hỗ trợ CORS gốc và khóa IP
                 const directDomains = ['.tv360.vn', 'tv360.vn', 'tv360.com.vn', 'fptplay', 'vtvgo', 'vietanhtv.top', '.vietanhtv.top'];
                 if (directDomains.some(domain => hostname.includes(domain))) {
                     return false;
                 }
             } catch (e) {
-                // Nếu URL không hợp lệ (URL tương đối), không proxy
                 return false;
             }
             return true;
         }
 
-        // Custom Loader class để tự động định tuyến các request cần thiết qua CORS proxy
         class CorsProxyLoader {
             constructor(config) {
                 if (Hls && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
@@ -1944,7 +1857,6 @@
             }
         }
 
-        // ====== PHÁT HIỆN NỀN TẢNG SMART TV ======
         const IS_TIZEN = navigator.userAgent.includes('Tizen');
         const IS_WEBOS = navigator.userAgent.includes('Web0S') || navigator.userAgent.includes('webOS');
         const IS_SMART_TV = IS_TIZEN || IS_WEBOS;
@@ -1959,22 +1871,21 @@
             }
         }
 
-        // ====== CẤU HÌNH BUFFER TỐI THIỂU CHO TV ======
         const TV_HLS_CONFIG = {
-            maxBufferLength: 15,           // Giây buffer tối đa (mặc định 60-300s)
-            maxBufferSize: 10 * 1024 * 1024, // 10MB (mặc định vài trăm MB)
+            maxBufferLength: 15,
+            maxBufferSize: 10 * 1024 * 1024,
             maxBufferHole: 2,
             liveSyncDurationCount: 2,
             liveMaxLatencyDurationCount: 5,
-            backBufferLength: 10,          // Giữ 10s quá khứ, còn lại xóa
-            enableWorker: false,           // Tắt worker tránh crash RAM trên Smart TV
+            backBufferLength: 10,
+            enableWorker: false,
             fragLoadingMaxRetry: 4,
             manifestLoadingMaxRetry: 4,
             levelLoadingMaxRetry: 4,
             fragLoadingRetryDelay: 1000,
             manifestLoadingRetryDelay: 500,
             enableSoftwareAES: false,
-            enableWebVTT: false,           // Tự xử lý subtitle
+            enableWebVTT: false,
             enableIMSC1: false,
             enableCEA708Captions: false,
         };
@@ -1984,7 +1895,7 @@
                 buffer: {
                     fastSwitchEnabled: true,
                     bufferPruningInterval: 10,
-                    bufferToKeep: 10,           // Giữ 10s
+                    bufferToKeep: 10,
                     bufferTimeAtTopQuality: 15,
                     bufferTimeAtTopQualityLongForm: 20,
                 },
@@ -2007,7 +1918,6 @@
             },
         };
 
-        // Đăng ký các nút PIN ảo
         document.querySelectorAll('.pin-btn').forEach(btn => {
             btn.onclick = () => {
                 const val = btn.innerText;
@@ -2022,12 +1932,28 @@
                         pinOverlay.style.display = 'none';
                         renderTabs();
                         renderChannels(channels);
-                        const firstCard = document.querySelector('.channel-card');
-                        if (firstCard) {
-                            firstCard.focus();
+                        
+                        // TỰ ĐỘNG PHÁT KÊNH KHI MỞ APP 
+                        const lastUrl = localStorage.getItem('last_played_url');
+                        if (lastUrl) {
+                            const targetCh = channels.find(ch => ch.url === lastUrl);
+                            if (targetCh) {
+                                loadAndPlay(targetCh.url, targetCh.subtitle || targetCh.sub, targetCh.key || targetCh.drm);
+                            } else {
+                                const lastSub = localStorage.getItem('last_played_sub');
+                                const lastDrm = localStorage.getItem('last_played_drm');
+                                loadAndPlay(lastUrl, lastSub, lastDrm);
+                            }
+                        } else if (channels && channels.length > 0) {
+                            loadAndPlay(channels[0].url, channels[0].subtitle || channels[0].sub, channels[0].key || channels[0].drm);
+                        }
+                        
+                        const firstTab = document.querySelector('.tv-tab-btn');
+                        if (firstTab) {
+                            firstTab.focus();
                         } else {
-                            const headerCast = document.getElementById('header-cast-btn');
-                            if (headerCast) headerCast.focus();
+                            const firstCard = document.querySelector('.channel-card');
+                            if (firstCard) firstCard.focus();
                         }
                     } else {
                         pinError.innerText = "Sai mã PIN!";
@@ -2043,7 +1969,6 @@
             };
         });
 
-        // 2. KHỞI TẠO ROOM ID VÀ MẠNG TÍN HIỆU
         if (!roomID) {
             roomID = localStorage.getItem('tv_room_id');
             if (!roomID) {
@@ -2054,16 +1979,15 @@
             window.history.replaceState(null, '', newUrl);
         }
 
-        // ====== SSE MANAGER TỐI ƯU ======
         const SSEManager = {
             eventSource: null,
             reconnectTimer: null,
             reconnectAttempts: 0,
-            MAX_RECONNECT_DELAY: 30000, // 30s max
-            BASE_RECONNECT_DELAY: 1000,  // 1s ban đầu
+            MAX_RECONNECT_DELAY: 30000,
+            BASE_RECONNECT_DELAY: 1000,
             pendingPlayUrl: null,
             playDebounceTimer: null,
-            PLAY_DEBOUNCE: 300, // ms
+            PLAY_DEBOUNCE: 300,
             isConnecting: false,
             lastEventId: null,
             
@@ -2072,7 +1996,6 @@
                 this.isConnecting = true;
                 this.close();
                 
-                // Tránh lỗi custom header, truyền qua Query Parameter
                 let url = `${NTFY_SERVER}${roomID}/sse`;
                 if (this.lastEventId) {
                     url += `?lastEventId=${encodeURIComponent(this.lastEventId)}`;
@@ -2124,7 +2047,7 @@
                 const parts = msg.split('|').map(p => p.trim());
                 const videoUrl = parts[0];
                 if (videoUrl === currentVideoUrl && !video.paused) {
-                    return; // Tránh nạp lại nếu đang phát chính url đó
+                    return;
                 }
                 
                 clearTimeout(this.playDebounceTimer);
@@ -2223,7 +2146,6 @@
             }
         }
 
-        // Đăng ký phím Media với tivi Samsung Tizen
         function registerTVKeys() {
             if (window.tizen && window.tizen.tvinputdevice) {
                 try {
@@ -2239,13 +2161,11 @@
             }
         }
 
-        // 3. RENDER TABS & KÊNH
         function renderTabs() {
             const tabContainer = document.getElementById('tv-tabs');
             if (!tabContainer) return;
             tabContainer.innerHTML = '';
 
-            // Lấy tất cả các danh mục độc bản từ channels
             const categories = ["Tất cả"];
             channels.forEach(ch => {
                 const cat = ch.category || "Khác";
@@ -2267,7 +2187,6 @@
                     document.querySelectorAll('.tv-tab-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
 
-                    // Lọc và render kênh tương ứng
                     const filtered = (cat === "Tất cả") ? channels : channels.filter(ch => (ch.category || "Khác") === cat);
                     renderChannels(filtered);
                 };
@@ -2300,7 +2219,7 @@
                 card.dataset.globalIndex = globalIdx;
                 card.innerHTML = `
                     <div class="img-container">
-                        <img src="${ch.logo}" alt="${ch.name}">
+                        <img src="${ch.logo}" alt="${ch.name}" loading="lazy" onerror="this.style.display='none'">
                         <div class="ch-number-badge">${chNumber}</div>
                     </div>
                     <div class="ch-name">${ch.name}</div>
@@ -2313,9 +2232,6 @@
             });
         }
 
-
-
-        // Helper chuyển đổi Hex sang Base64URL không padding để làm việc với ClearKey DRM
         function hexToBase64Url(hexString) {
             try {
                 const cleanHex = hexString.replace(/[-]/g, '').trim();
@@ -2332,7 +2248,6 @@
             }
         }
 
-        // Tách khóa giải mã ClearKey (KID:KEY) dạng Hex từ URL hoặc tham số truyền vào
         function extractClearKey(url, drmKeyParam) {
             let keyStr = drmKeyParam || "";
             
@@ -2340,9 +2255,7 @@
                 try {
                     const parsedUrl = new URL(url);
                     keyStr = parsedUrl.searchParams.get('key') || parsedUrl.searchParams.get('clearkey') || parsedUrl.searchParams.get('drm_key') || "";
-                } catch (e) {
-                    // Bỏ qua lỗi phân tích URL của các đường dẫn tương đối
-                }
+                } catch (e) {}
             }
             
             if (!keyStr) return null;
@@ -2371,7 +2284,6 @@
             return null;
         }
 
-        // Biến kiểm soát trạng thái phát
         let currentSubtitleAbort = null;
         let currentSubtitleBlobUrl = null;
         let stallCheckTimer = null;
@@ -2385,7 +2297,6 @@
             if (!currentVideoUrl) return;
             const currentTime = video.currentTime;
             
-            // Chỉ lưu khi đã phát được ít nhất 5 giây và không ở sát cuối video (trong vòng 10 giây cuối hoặc 98% thời lượng)
             if (currentTime > 5 && video.duration && (video.duration - currentTime > 10) && (currentTime / video.duration < 0.98)) {
                 let positions = {};
                 try {
@@ -2395,25 +2306,20 @@
                 }
                 positions[currentVideoUrl] = currentTime;
                 
-                // Giảm giới hạn tối đa xuống 30 bản ghi để cứu bộ nhớ TV
                 const keys = Object.keys(positions);
                 if (keys.length > 30) {
-                    // Xóa cụm 5 bản ghi cũ nhất để dọn rác nhanh hơn
                     for (let i = 0; i < 5; i++) {
                         if (keys[i]) delete positions[keys[i]];
                     }
                 }
                 
-                // BỌC TRY-CATCH CỰC KỲ QUAN TRỌNG CHỐNG CRASH TIVI
                 try {
                     localStorage.setItem('webtv_resume_positions', JSON.stringify(positions));
                 } catch (error) {
                     console.warn("LocalStorage TV đã đầy! Đang tự động dọn dẹp...", error);
-                    // Xóa trắng lịch sử nếu cạn kiệt dung lượng để cứu luồng Javascript
                     localStorage.removeItem('webtv_resume_positions');
                 }
             } else if (video.duration && (video.duration - currentTime <= 10 || currentTime / video.duration >= 0.98)) {
-                // Nếu xem gần hết video, xóa vị trí đã lưu để lần sau xem lại từ đầu
                 clearPlaybackPosition(currentVideoUrl);
             }
         }
@@ -2473,11 +2379,8 @@
                 dashPlayer = null;
             }
             
-            video.removeAttribute('src');
-            try {
-                video.load();
-            } catch (e) {}
-
+            video.src = ""; // Fix LG WebOS Crash
+            
             const oldTracks = video.querySelectorAll('track');
             oldTracks.forEach(t => {
                 t.remove();
@@ -2508,7 +2411,6 @@
             if (isGuideOpen) closeChannelGuide();
             destroyPlayersOnly();
 
-            // Ẩn khung player và thoát fullscreen
             const playerWrapper = document.getElementById('player-wrapper');
             if (playerWrapper) {
                 playerWrapper.classList.remove('active');
@@ -2518,7 +2420,6 @@
                 document.exitFullscreen().catch(() => {});
             }
 
-            // Trả lại focus cho phần tử đã chọn trước đó
             if (lastActiveElement && lastActiveElement.isConnected) {
                 lastActiveElement.focus();
             } else {
@@ -2602,7 +2503,6 @@
             }
         }
 
-        // --- BẮT ĐẦU: PHÂN GIẢI VÀ CACHE TV360 REDIRECT ---
         function getExpiryTimeFromUrl(cdnUrl) {
             try {
                 const urlObj = new URL(cdnUrl);
@@ -2681,11 +2581,19 @@
             }
             return sourceUrl;
         }
-        // --- KẾT THÚC: PHÂN GIẢI VÀ CACHE TV360 REDIRECT ---
 
-        // 4. PHÂN TÍCH VÀ PHÁT VIDEO KÈM PHỤ ĐỀ (TỐI ƯU TV)
+        // 4. PHÂN TÍCH VÀ PHÁT VIDEO KÈM PHỤ ĐỀ
         async function loadAndPlay(url, subUrl, drmKey) {
             if (isVideoLoading) return;
+            
+            if (url) {
+                localStorage.setItem('last_played_url', url);
+                if (subUrl) localStorage.setItem('last_played_sub', subUrl);
+                else localStorage.removeItem('last_played_sub');
+                if (drmKey) localStorage.setItem('last_played_drm', drmKey);
+                else localStorage.removeItem('last_played_drm');
+            }
+
             isVideoLoading = true;
 
             const playerWrapper = document.getElementById('player-wrapper');
@@ -2693,12 +2601,10 @@
                 playerWrapper.classList.add('active');
             }
             
-            // Lưu lại phần tử đang focus trước khi phát
             if (document.activeElement && document.activeElement !== document.body && (!playerWrapper || !playerWrapper.contains(document.activeElement))) {
                 lastActiveElement = document.activeElement;
             }
 
-            // Tự động yêu cầu Fullscreen nếu chưa ở Fullscreen
             try {
                 if (playerWrapper && !document.fullscreenElement) {
                     requestTVFullscreen(video, playerWrapper);
@@ -2724,7 +2630,6 @@
             
             destroyPlayersOnly();
 
-            // Đợi microtask để giải phóng decoder cũ
             await new Promise(r => setTimeout(r, 20));
 
             let targetPlayUrl = url;
@@ -2734,8 +2639,6 @@
                 const resolvedUrl = await resolveTV360Url(url);
                 if (resolvedUrl !== url) {
                     targetPlayUrl = resolvedUrl;
-                    // Nếu CDN URL là HTTPS → không cần proxy (CORS OK)
-                    // Nếu CDN URL là HTTP → cần proxy (mixed content)
                     if (targetPlayUrl.startsWith('https://')) {
                         forceDisableProxy = true;
                     }
@@ -2866,7 +2769,7 @@
                                 });
                             }
                             if (targetLevel !== -1) {
-                                hls.currentLevel = targetLevel; // Khóa cứng chất lượng ngay lập tức
+                                hls.currentLevel = targetLevel; 
                                 console.log(`[WEBTV] HLS đã khóa chất lượng mặc định: ${levels[targetLevel].height || 'Cao nhất'}p`);
                             }
                         }
@@ -2937,7 +2840,6 @@
             isVideoLoading = false;
         }
 
-        // Chuyển đổi SRT sang WebVTT (dùng dấu chấm thay dấu phẩy)
         function convertSrtToVtt(srtText) {
             let vtt = srtText.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
             if (!vtt.startsWith('WEBVTT')) {
@@ -2960,7 +2862,6 @@
             }
         }
 
-        // Gắn phụ đề vào thẻ video
         function addSubtitleTrack(src) {
             const track = document.createElement('track');
             track.kind = 'subtitles';
@@ -2970,13 +2871,11 @@
             track.default = true;
             video.appendChild(track);
             
-            // Kích hoạt hiển thị phụ đề sau khi gắn
             setTimeout(() => {
                 if (video.textTracks && video.textTracks[0]) {
                     const textTrack = video.textTracks[0];
                     textTrack.mode = 'showing';
                     
-                    // Lắng nghe sự kiện cuechange để thay đổi vị trí phụ đề động
                     textTrack.oncuechange = function() {
                         const position = parseInt(localStorage.getItem('sub_position')) || 85;
                         const activeCues = this.activeCues;
@@ -2989,7 +2888,6 @@
                         }
                     };
                     
-                    // Áp dụng luôn cho toàn bộ cue đã load
                     const position = parseInt(localStorage.getItem('sub_position')) || 85;
                     applySubtitlePosition(position);
                 }
@@ -3000,10 +2898,8 @@
             const targetCh = channels[chIndex];
             if (!targetCh) return;
 
-            // Tìm danh mục của kênh
             const cat = targetCh.category || "Khác";
 
-            // Kích hoạt tab danh mục tương ứng
             const tabBtns = document.querySelectorAll('.tv-tab-btn');
             let matchedTab = null;
             tabBtns.forEach(btn => {
@@ -3012,16 +2908,14 @@
                 }
             });
 
-            // Nếu không tìm thấy tab cụ thể, dùng tab đầu tiên (thường là "Tất cả")
             if (!matchedTab && tabBtns.length > 0) {
                 matchedTab = tabBtns[0];
             }
 
             if (matchedTab) {
-                matchedTab.click(); // Gọi click để kích hoạt tab và render lại lưới kênh
+                matchedTab.click(); 
             }
 
-            // Đợi một khoảng thời gian ngắn để DOM render xong lưới kênh
             setTimeout(() => {
                 const card = document.querySelector(`.channel-card[data-global-index="${chIndex}"]`);
                 if (card) {
@@ -3150,7 +3044,6 @@
         if (subShadowSelect) subShadowSelect.onchange = saveAndApplySubtitleSettings;
         if (subPositionSelect) subPositionSelect.onchange = saveAndApplySubtitleSettings;
 
-        // 5.1 CẤU HÌNH CORS PROXY VÀ VƯỢT CƠ CHẾ CORS
         function loadCorsProxySettings() {
             const val = localStorage.getItem('cors_proxy') || 'off';
             corsProxySelect.value = val;
@@ -3159,14 +3052,12 @@
         corsProxySelect.onchange = (e) => {
             localStorage.setItem('cors_proxy', e.target.value);
             if (currentVideoUrl) {
-                // Tải lại luồng hiện tại để áp dụng proxy lập tức
                 const activeTracks = video.querySelectorAll('track');
                 const subUrl = activeTracks.length > 0 ? activeTracks[0].src : null;
                 loadAndPlay(currentVideoUrl, subUrl, null);
             }
         };
 
-        // Hàm định dạng tên chất lượng ngắn gọn, thẩm mỹ (Auto, 4K, 2K, 1080p, 720p, v.v.)
         function getShortQualityName(height, fallbackName) {
             if (height) {
                 if (height >= 2160) return "4K";
@@ -3187,14 +3078,12 @@
             return "Auto";
         }
 
-        // Cập nhật danh sách độ phân giải từ HLS Level hoặc DASH Bitrate
         function updateQualityLevels() {
             const qualityGroup = document.getElementById('quality-setting-group');
             const qualitySelect = document.getElementById('quality-select');
             
             qualityGroup.style.display = 'inline-flex';
             
-            // 1. Trường hợp đang phát MPEG-DASH (.mpd)
             if (currentVideoUrl.toLowerCase().includes('.mpd') && dashPlayer) {
                 try {
                     const bitrates = dashPlayer.getBitrateInfoListFor('video');
@@ -3210,7 +3099,6 @@
                         return;
                     }
                     
-                    // Nhiều độ phân giải
                     const settings = dashPlayer.getSettings();
                     const isAuto = settings && settings.streaming && settings.streaming.abr && settings.streaming.abr.autoSwitchBitrate && settings.streaming.abr.autoSwitchBitrate.video;
                     const currentQuality = dashPlayer.getQualityFor('video');
@@ -3233,7 +3121,6 @@
                 return;
             }
 
-            // 2. Trường hợp đang phát Hls.js (.m3u8)
             if (hls && hls.levels && hls.levels.length > 0) {
                 if (hls.levels.length === 1) {
                     const level = hls.levels[0];
@@ -3260,16 +3147,13 @@
                 return;
             }
 
-            // 3. Trường hợp phát trực tiếp không qua thư viện hoặc file MP4
             const h = video.videoHeight;
             qualitySelect.innerHTML = `<option value="-1" selected>${getShortQualityName(h, "Auto")}</option>`;
         }
 
-        // Đăng ký sự kiện thay đổi độ phân giải thủ công
         document.getElementById('quality-select').onchange = (e) => {
             const val = parseInt(e.target.value);
             
-            // Xử lý chất lượng cho DASH
             if (currentVideoUrl.toLowerCase().includes('.mpd') && dashPlayer) {
                 if (val === -1) {
                     dashPlayer.updateSettings({ 'streaming': { 'abr': { 'autoSwitchBitrate': { 'video': true } } } });
@@ -3278,7 +3162,6 @@
                     dashPlayer.setQualityFor('video', val);
                 }
             }
-            // Xử lý chất lượng cho HLS
             else if (hls) {
                 hls.currentLevel = val;
             }
@@ -3296,14 +3179,12 @@
         video.addEventListener('timeupdate', () => {
             if (!video.duration) return;
 
-            // 1. Việc lưu vị trí ngầm (không đụng tới giao diện) vẫn cho phép chạy kiểm tra
             const now = Date.now();
             if (now - lastPositionSavedTime > 5000) {
                 savePlaybackPosition();
                 lastPositionSavedTime = now;
             }
 
-            // 2. CHỈ cập nhật giao diện (DOM) đúng 1 lần mỗi giây
             const currentSecond = Math.floor(video.currentTime);
             
             if (currentSecond !== lastTimeUpdateSecond) {
@@ -3340,7 +3221,6 @@
         function handleProgressPointer(e) {
             if (!video.duration || !isFinite(video.duration)) return;
             
-            // Lọc sự kiện Enter/OK của TV giả lập click (0,0)
             if (e.type === 'click' && e.clientX === 0 && e.clientY === 0) {
                 return;
             }
@@ -3369,9 +3249,6 @@
         let lastModalOpenedFrom = null;
         let lastExitModalOpenedFrom = null;
 
-        // ==========================================
-        // OVERLAY SIDEBAR & ZAPPING LOGIC KHI XEM
-        // ==========================================
         function renderSidebarChannels() {
             if (!sidebarList) return;
             sidebarList.innerHTML = '';
@@ -3451,7 +3328,6 @@
             }, 5000);
         }
 
-        // ===== CHANNEL GUIDE OVERLAY =====
         const channelGuideOverlay = document.getElementById('channel-guide-overlay');
         let isGuideOpen = false;
         let lastGuideOpenedFrom = null;
@@ -3662,21 +3538,19 @@
         };
 
         // ==========================================
-        // THUẬT TOÁN ĐIỀU HƯỚNG 2D SPATIAL NAVIGATION (TỐI ƯU CACHE RECT - V2)
+        // THUẬT TOÁN ĐIỀU HƯỚNG 2D SPATIAL NAVIGATION
         // ==========================================
         let focusableCache = [];
         let isCacheValid = false;
         let lastNavTime = 0;
-        const NAV_COOLDOWN = 150; // ms chống trôi phím
+        const NAV_COOLDOWN = 150;
 
         function invalidateFocusableCache() {
             isCacheValid = false;
         }
 
-        // Khởi tạo biến lưu trữ timer cho Debounce
         let mutationDebounceTimer = null;
 
-        // Tự động vô hiệu hóa cache khi DOM thay đổi
         const domMutationObserver = new MutationObserver((mutations) => {
             let shouldInvalidate = false;
             for (const m of mutations) {
@@ -3691,19 +3565,11 @@
             }
             
             if (shouldInvalidate) {
-                // 1. NGAY LẬP TỨC vô hiệu hóa cache để chặn việc lấy tọa độ cũ
                 invalidateFocusableCache();
-                
-                // 2. Clear timer cũ nếu DOM vẫn đang nhảy liên tục
                 if (mutationDebounceTimer) {
                     clearTimeout(mutationDebounceTimer);
                 }
-                
-                // 3. Set một khoảng "trễ" nhỏ (120ms) để DOM ổn định. 
-                // Lưu ý: Vì kiến trúc lazy-load, hàm refreshFocusableCache() chỉ chạy khi người dùng BẤM PHÍM.
-                // Việc invalidate ngay lập tức ở trên đã đảm bảo phím bấm tiếp theo luôn đo lại tọa độ mới.
                 mutationDebounceTimer = setTimeout(() => {
-                    // Có thể thêm cờ báo hiệu DOM đã ổn định tại đây nếu cần xử lý phức tạp hơn
                 }, 120);
             }
         });
@@ -3715,7 +3581,6 @@
             attributeFilter: ['class', 'style', 'hidden', 'disabled']
         });
 
-        // Sử dụng resize window thay cho ResizeObserver để đảm bảo chạy được trên tivi cũ
         let resizeDebounceTimer = null;
         window.addEventListener('resize', () => {
             clearTimeout(resizeDebounceTimer);
@@ -3728,7 +3593,6 @@
             const elements = getFocusableElementsRaw();
             focusableCache = [];
             
-            // Đo tọa độ hàng loạt (tránh forced reflow xen kẽ)
             elements.forEach(el => {
                 const rect = el.getBoundingClientRect();
                 if (rect.width > 0 && rect.height > 0) {
@@ -3930,7 +3794,6 @@
             GUIDE: 458, INFO: 457, MENU: 18
         };
 
-        // Quản lý ẩn/hiện con trỏ chuột tự động trên TV
         let cursorTimer = null;
         function showCursorTemporarily() {
             document.body.classList.remove('hide-cursor');
@@ -3941,7 +3804,6 @@
         }
         window.addEventListener('mousemove', showCursorTemporarily);
         window.addEventListener('click', showCursorTemporarily);
-        // Mặc định ẩn cursor khi khởi chạy
         document.body.classList.add('hide-cursor');
 
         document.addEventListener('keydown', (e) => {
@@ -3961,7 +3823,6 @@
                                   (exitModal && exitModal.classList.contains('active')) ||
                                   pinOverlay.style.display !== 'none';
 
-            // Xử lý các phím điều hướng khi đang phát video (Fullscreen)
             if (isPlayerActive && !isModalActive) {
                 if (isSidebarOpen) {
                     resetSidebarAutoCloseTimer();
@@ -3976,7 +3837,6 @@
             }
 
             if (isDirectionKey) {
-                // Tua video không bị giới hạn bởi NAV_COOLDOWN để tăng phản hồi mượt mà
                 const isPlayerSeek = isPlayerActive && !isModalActive && isSeekingKey && 
                     (controlsOverlay.classList.contains('hidden') || 
                      !activeElement || 
@@ -3997,7 +3857,6 @@
                 }
             }
 
-            // Khi fullscreen: LEFT → kênh trước, RIGHT → kênh tiếp theo (thay vì seek)
             if (isPlayerActive && !isModalActive && !isGuideOpen && isSeekingKey) {
                 const isControlsHidden = controlsOverlay.classList.contains('hidden');
                 const isNavigatingButtons = activeElement && 
@@ -4016,13 +3875,11 @@
                     const currentIdx = channels.findIndex(ch => ch.url === currentVideoUrl);
                     
                     if (keyCode === KEY_CODES.LEFT) {
-                        // Prev channel (vòng quanh)
                         const prevIdx = currentIdx > 0 ? currentIdx - 1 : channels.length - 1;
                         const targetCh = channels[prevIdx];
                         showSeekToast(`« ${targetCh.name}`);
                         loadAndPlay(targetCh.url, targetCh.subtitle || targetCh.sub, targetCh.key || targetCh.drm);
                     } else {
-                        // Next channel (vòng quanh)
                         const nextIdx = currentIdx < channels.length - 1 ? currentIdx + 1 : 0;
                         const targetCh = channels[nextIdx];
                         showSeekToast(`${targetCh.name} »`);
@@ -4032,10 +3889,9 @@
                 }
             }
 
-            // Xử lý phím cho PIN Overlay
             if (pinOverlay.style.display !== 'none') {
                 resetTVIdleTimer();
-                if (keyCode >= 48 && keyCode <= 57) { // Phím số 0-9 vật lý
+                if (keyCode >= 48 && keyCode <= 57) {
                     const num = keyCode - 48;
                     if (currentPinText.length < 8) {
                         currentPinText += num;
@@ -4067,15 +3923,13 @@
                     if (nextElement) nextElement.focus();
                     return;
                 }
-                return; // Ngăn chặn các phím khác khi chưa mở khóa
+                return;
             }
 
             resetTVIdleTimer();
 
-            // Chặn phím số chuyển kênh nếu đang gõ dữ liệu trong các ô Input (Cài đặt Token...)
             const isInputActive = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
 
-            // ========== PHÍM TẮT +/- TĂNG GIẢM CỠ CHỮ PHỤ ĐỀ NHANH ==========
             if ((e.key === '+' || e.key === '=' || keyCode === 107 || keyCode === 187) && !isInputActive) {
                 e.preventDefault();
                 changeSubtitleSize(2);
@@ -4087,7 +3941,6 @@
                 return;
             }
 
-            // ========== 1. XỬ LÝ PHÍM SỐ (0-9) ĐỂ CHUYỂN KÊNH NHANH ==========
             if (!isGuideOpen && keyCode >= 48 && keyCode <= 57 && !isInputActive) {
                 e.preventDefault();
                 resetTVIdleTimer();
@@ -4098,14 +3951,13 @@
                 
                 clearTimeout(channelNumberTimeout);
                 
-                // Adaptive timeout: 1500ms nếu có thể mở rộng thành 2 số (vd: 1→10-19), 800ms nếu không
                 const canBeExtended = (channelNumberBuffer.length === 1 && 
                     parseInt(channelNumberBuffer, 10) * 10 <= channels.length);
                 const timeoutDelay = canBeExtended ? 1500 : 800;
                 
                 channelNumberTimeout = setTimeout(() => {
                     const targetChNum = parseInt(channelNumberBuffer, 10);
-                    const chIndex = targetChNum - 1; // 1-based index sang 0-based index
+                    const chIndex = targetChNum - 1;
                     
                     if (chIndex >= 0 && chIndex < channels.length) {
                         const targetCh = channels[chIndex];
@@ -4123,9 +3975,6 @@
                 return;
             }
 
-
-
-            // Xác nhận nhanh bằng phím Enter khi có bộ đệm số
             if (keyCode === KEY_CODES.ENTER && channelNumberBuffer !== "") {
                 e.preventDefault();
                 clearTimeout(channelNumberTimeout);
@@ -4149,39 +3998,16 @@
                 return;
             }
 
-            // ========== 2. XỬ LÝ PHÍM LÊN/XUỐNG ĐỂ LƯỚT KÊNH KHI ẨN MENU ==========
             if (isPlayerActive && !isModalActive && !isGuideOpen) {
                 const isControlsHidden = controlsOverlay.classList.contains('hidden');
                 if (isControlsHidden && (keyCode === KEY_CODES.UP || keyCode === KEY_CODES.DOWN)) {
                     e.preventDefault();
                     resetTVIdleTimer();
-                    
-                    const currentUrl = currentVideoUrl;
-                    let currentIndex = channels.findIndex(ch => ch.url === currentUrl);
-                    if (currentIndex === -1) currentIndex = 0;
-                    
-                    let nextIndex;
-                    if (keyCode === KEY_CODES.UP) {
-                        nextIndex = (currentIndex + 1) % channels.length;
-                    } else {
-                        nextIndex = (currentIndex - 1 + channels.length) % channels.length;
-                    }
-                    
-                    const nextCh = channels[nextIndex];
-                    showSeekToast(`Đang chuyển đến: ${nextCh.name}`);
-                    loadAndPlay(nextCh.url, nextCh.subtitle || nextCh.sub, nextCh.key || nextCh.drm);
-                    
-                    // Đồng bộ tiêu điểm lưới kênh
-                    const card = document.querySelectorAll('.channel-card')[nextIndex];
-                    if (card) {
-                        card.focus();
-                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                    openChannelSidebar();
                     return;
                 }
             }
 
-            // Xử lý phím trong Settings Modal
             if (modal.classList.contains('active')) {
                 const isInputActive = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
 
@@ -4200,7 +4026,6 @@
                     return;
                 }
                 if (isInputActive && (keyCode === KEY_CODES.LEFT || keyCode === KEY_CODES.RIGHT)) {
-                    // Cho phép di chuyển con trỏ trong ô nhập liệu
                     return;
                 }
                 if (keyCode === KEY_CODES.ENTER) {
@@ -4216,7 +4041,6 @@
                 return;
             }
 
-            // Xử lý phím trong Cast Modal
             if (castModal.classList.contains('active')) {
                 if (keyCode === KEY_CODES.ESCAPE || keyCode === KEY_CODES.BACK || keyCode === KEY_CODES.RETURN || keyCode === KEY_CODES.WEBOS_BACK || keyCode === KEY_CODES.BACK_ANDROID) {
                     e.preventDefault();
@@ -4328,9 +4152,29 @@
                     e.preventDefault();
                     document.getElementById('settings-toggle').click();
                     return;
+                case KEY_CODES.GREEN:
+                    e.preventDefault();
+                    resetTVIdleTimer();
+                    if (isPlayerActive && !isModalActive) {
+                        if (isSidebarOpen) {
+                            closeChannelSidebar();
+                        } else {
+                            if (isGuideOpen) closeChannelGuide();
+                            openChannelSidebar();
+                        }
+                    }
+                    return;
                 case KEY_CODES.BLUE:
                     e.preventDefault();
-                    document.getElementById('mute-btn').click();
+                    resetTVIdleTimer();
+                    if (isPlayerActive && !isModalActive) {
+                        if (isGuideOpen) {
+                            closeChannelGuide();
+                        } else {
+                            if (isSidebarOpen) closeChannelSidebar();
+                            openChannelGuide();
+                        }
+                    }
                     return;
             }
 
@@ -4353,12 +4197,10 @@
                 return;
             }
 
-            // ENTER/OK: Redesigned with priority tree to prevent fullscreen conflict
             if (keyCode === KEY_CODES.ENTER) {
                 e.preventDefault();
                 e.stopPropagation();
                 
-                // Priority 1: Modal đang active → đóng modal hoặc xử lý modal
                 const isModalActive = modal.classList.contains('active') || 
                                       castModal.classList.contains('active') || 
                                       (exitModal && exitModal.classList.contains('active'));
@@ -4369,7 +4211,6 @@
                     return;
                 }
                 
-                // Priority 2: Guide đang mở → xử lý guide
                 if (isGuideOpen) {
                     if (activeElement && activeElement !== document.body && activeElement !== wrapper) {
                         activeElement.click();
@@ -4377,7 +4218,6 @@
                     return;
                 }
                 
-                // Priority 3: Sidebar đang mở → xử lý sidebar
                 if (isSidebarOpen) {
                     if (activeElement && activeElement !== document.body && activeElement !== wrapper) {
                         activeElement.click();
@@ -4385,13 +4225,11 @@
                     return;
                 }
                 
-                // Priority 4: Player mode active → LUÔN mở guide (không cho click) ✅ FIX
                 if (isPlayerActive) {
                     openChannelGuide();
                     return;
                 }
                 
-                // Priority 5: Default → click element nếu hợp lệ
                 const isValidClickTarget = activeElement && 
                                            activeElement !== document.body && 
                                            activeElement !== wrapper &&
@@ -4407,11 +4245,9 @@
             }
         });
 
-        // Tự động hiện/ẩn thanh điều khiển khi tương tác chuột/pointer
         wrapper.addEventListener('mousemove', resetTVIdleTimer);
         wrapper.addEventListener('click', resetTVIdleTimer);
 
-        // Tự động di chuyển modal vào trong player-wrapper khi ở chế độ Fullscreen để hiển thị tốt trên Smart TV
         const handleFullscreenChange = () => {
             const playerWrapper = document.getElementById('player-wrapper');
             const settingsModalOverlay = document.getElementById('settings-modal-overlay');
@@ -4445,9 +4281,7 @@
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
-        // Khởi chạy hệ thống trên Tivi
         async function initTVApp() {
-            // Thiết lập History trap chặn phím Back vật lý trình duyệt
             try {
                 history.pushState({ page: 'home' }, '', window.location.href);
                 window.addEventListener('popstate', (e) => {
@@ -4461,10 +4295,8 @@
             registerTVKeys();
             loadSubtitleSettings();
             
-            // 1. Tải kênh online từ GitHub
             await fetchDynamicChannels();
             
-            // 2. Thử tự động giải mã bằng PIN đã lưu
             const savedPin = localStorage.getItem('app_pin') || '';
             let decryptSuccess = false;
             if (savedPin) {
@@ -4472,10 +4304,23 @@
             }
             
             if (decryptSuccess) {
-                // Giải mã thành công -> ẩn overlay nhập PIN
                 pinOverlay.style.display = 'none';
                 renderTabs();
                 renderChannels(channels);
+                
+                const lastUrl = localStorage.getItem('last_played_url');
+                if (lastUrl) {
+                    const targetCh = channels.find(ch => ch.url === lastUrl);
+                    if (targetCh) {
+                        loadAndPlay(targetCh.url, targetCh.subtitle || targetCh.sub, targetCh.key || targetCh.drm);
+                    } else {
+                        const lastSub = localStorage.getItem('last_played_sub');
+                        const lastDrm = localStorage.getItem('last_played_drm');
+                        loadAndPlay(lastUrl, lastSub, lastDrm);
+                    }
+                } else if (channels && channels.length > 0) {
+                    loadAndPlay(channels[0].url, channels[0].subtitle || channels[0].sub, channels[0].key || channels[0].drm);
+                }
                 
                 const firstTab = document.querySelector('.tv-tab-btn');
                 if (firstTab) {
@@ -4485,7 +4330,6 @@
                     if (firstCard) firstCard.focus();
                 }
             } else {
-                // Chưa giải mã được -> hiện overlay nhập PIN
                 pinOverlay.style.display = 'flex';
                 setTimeout(() => {
                     const firstBtn = document.querySelector('.pin-btn');
@@ -4493,9 +4337,7 @@
                 }, 100);
             }
             
-            // 5. Khởi tạo SSE
             SSEManager.init(roomID);
-            
             resetTVIdleTimer();
         }
 
