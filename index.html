@@ -192,13 +192,13 @@
             margin-top: 20px;
             padding: 10px 16px;
             border-radius: 100px;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.08);
+            /* Tăng độ đậm của nền để bù lại việc bỏ hiệu ứng kính mờ */
+            background: rgba(20, 20, 20, 0.85); 
+            border: 1px solid rgba(255,255,255,0.15);
             font-size: 13px;
-            color: rgba(255,255,255,0.45);
+            color: rgba(255,255,255,0.7);
             font-family: 'Outfit', sans-serif;
             letter-spacing: 0.3px;
-            backdrop-filter: blur(4px);
             pointer-events: none;
         }
         .channel-hint i {
@@ -275,7 +275,7 @@
             background-size: 200% 100%;
             width: 0%;
             border-radius: 4px;
-            transition: width 0.1s linear, height 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 1s linear, height 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: none;
             z-index: 1;
         }
@@ -2379,6 +2379,7 @@
         let isVideoLoading = false;
         let lastActiveElement = null;
         let lastPositionSavedTime = 0;
+        let lastTimeUpdateSecond = -1;
 
         function savePlaybackPosition() {
             if (!currentVideoUrl) return;
@@ -2394,12 +2395,23 @@
                 }
                 positions[currentVideoUrl] = currentTime;
                 
-                // Giới hạn tối đa 100 bản ghi để tối ưu bộ nhớ
+                // Giảm giới hạn tối đa xuống 30 bản ghi để cứu bộ nhớ TV
                 const keys = Object.keys(positions);
-                if (keys.length > 100) {
-                    delete positions[keys[0]]; // Xóa bản ghi cũ nhất
+                if (keys.length > 30) {
+                    // Xóa cụm 5 bản ghi cũ nhất để dọn rác nhanh hơn
+                    for (let i = 0; i < 5; i++) {
+                        if (keys[i]) delete positions[keys[i]];
+                    }
                 }
-                localStorage.setItem('webtv_resume_positions', JSON.stringify(positions));
+                
+                // BỌC TRY-CATCH CỰC KỲ QUAN TRỌNG CHỐNG CRASH TIVI
+                try {
+                    localStorage.setItem('webtv_resume_positions', JSON.stringify(positions));
+                } catch (error) {
+                    console.warn("LocalStorage TV đã đầy! Đang tự động dọn dẹp...", error);
+                    // Xóa trắng lịch sử nếu cạn kiệt dung lượng để cứu luồng Javascript
+                    localStorage.removeItem('webtv_resume_positions');
+                }
             } else if (video.duration && (video.duration - currentTime <= 10 || currentTime / video.duration >= 0.98)) {
                 // Nếu xem gần hết video, xóa vị trí đã lưu để lần sau xem lại từ đầu
                 clearPlaybackPosition(currentVideoUrl);
@@ -2416,7 +2428,11 @@
             }
             if (positions[url]) {
                 delete positions[url];
-                localStorage.setItem('webtv_resume_positions', JSON.stringify(positions));
+                try {
+                    localStorage.setItem('webtv_resume_positions', JSON.stringify(positions));
+                } catch (error) {
+                    console.warn("LocalStorage Error khi xóa: ", error);
+                }
             }
         }
         
@@ -2432,6 +2448,7 @@
         }
 
         function destroyPlayersOnly() {
+            lastTimeUpdateSecond = -1;
             savePlaybackPosition();
             clearStallCheck();
             video.pause();
@@ -3277,16 +3294,24 @@
         video.addEventListener('loadedmetadata', updateQualityLevels);
 
         video.addEventListener('timeupdate', () => {
-            if (video.duration) {
+            if (!video.duration) return;
+
+            // 1. Việc lưu vị trí ngầm (không đụng tới giao diện) vẫn cho phép chạy kiểm tra
+            const now = Date.now();
+            if (now - lastPositionSavedTime > 5000) {
+                savePlaybackPosition();
+                lastPositionSavedTime = now;
+            }
+
+            // 2. CHỈ cập nhật giao diện (DOM) đúng 1 lần mỗi giây
+            const currentSecond = Math.floor(video.currentTime);
+            
+            if (currentSecond !== lastTimeUpdateSecond) {
                 document.getElementById('progress-filled').style.width = (video.currentTime / video.duration) * 100 + '%';
                 document.getElementById('current-time').innerText = formatTime(video.currentTime);
                 document.getElementById('duration-time').innerText = formatTime(video.duration);
                 
-                const now = Date.now();
-                if (now - lastPositionSavedTime > 5000) {
-                    savePlaybackPosition();
-                    lastPositionSavedTime = now;
-                }
+                lastTimeUpdateSecond = currentSecond;
             }
         });
 
@@ -3637,7 +3662,7 @@
         };
 
         // ==========================================
-        // THUẬT TOÁN ĐIỀU HƯỚNG 2D SPATIAL NAVIGATION (TỐI ƯU CACHE RECT)
+        // THUẬT TOÁN ĐIỀU HƯỚNG 2D SPATIAL NAVIGATION (TỐI ƯU CACHE RECT - V2)
         // ==========================================
         let focusableCache = [];
         let isCacheValid = false;
@@ -3647,6 +3672,9 @@
         function invalidateFocusableCache() {
             isCacheValid = false;
         }
+
+        // Khởi tạo biến lưu trữ timer cho Debounce
+        let mutationDebounceTimer = null;
 
         // Tự động vô hiệu hóa cache khi DOM thay đổi
         const domMutationObserver = new MutationObserver((mutations) => {
@@ -3661,8 +3689,22 @@
                     break;
                 }
             }
+            
             if (shouldInvalidate) {
+                // 1. NGAY LẬP TỨC vô hiệu hóa cache để chặn việc lấy tọa độ cũ
                 invalidateFocusableCache();
+                
+                // 2. Clear timer cũ nếu DOM vẫn đang nhảy liên tục
+                if (mutationDebounceTimer) {
+                    clearTimeout(mutationDebounceTimer);
+                }
+                
+                // 3. Set một khoảng "trễ" nhỏ (120ms) để DOM ổn định. 
+                // Lưu ý: Vì kiến trúc lazy-load, hàm refreshFocusableCache() chỉ chạy khi người dùng BẤM PHÍM.
+                // Việc invalidate ngay lập tức ở trên đã đảm bảo phím bấm tiếp theo luôn đo lại tọa độ mới.
+                mutationDebounceTimer = setTimeout(() => {
+                    // Có thể thêm cờ báo hiệu DOM đã ổn định tại đây nếu cần xử lý phức tạp hơn
+                }, 120);
             }
         });
 
