@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -1310,7 +1311,7 @@
     </div>
 
     <div class="player-wrapper" id="player-wrapper" title="Nhấn OK để toàn màn hình">
-        <video id="main-video" playsinline webkit-playsinline crossorigin="anonymous"></video>
+        <video id="main-video" playsinline webkit-playsinline crossorigin="anonymous" referrerpolicy="no-referrer"></video>
         <div class="loading-indicator" id="loading-indicator">
             <i class="fas fa-spinner fa-spin"></i> Đang tải luồng...
         </div>
@@ -1872,6 +1873,11 @@
         }
 
         const TV_HLS_CONFIG = {
+            xhrSetup: function (xhr, url) {
+                if ('referrerPolicy' in xhr) {
+                    xhr.referrerPolicy = 'no-referrer';
+                }
+            },
             maxBufferLength: 15,
             maxBufferSize: 10 * 1024 * 1024,
             maxBufferHole: 2,
