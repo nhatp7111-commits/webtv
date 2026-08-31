@@ -1312,7 +1312,7 @@
 
     <div class="player-wrapper" id="player-wrapper" title="Nhấn OK để toàn màn hình">
         <video id="main-video" playsinline webkit-playsinline crossorigin="anonymous" referrerpolicy="no-referrer"></video>
-        <iframe id="iframe-player" style="width: 100%; height: 100%; border: none; display: none; background: #000; position: absolute; top: 0; left: 0; z-index: 1;" allowfullscreen="true"></iframe>
+        <iframe id="iframe-player" style="width: 100%; height: 100%; border: none; display: none; background: #000; position: absolute; top: 0; left: 0; z-index: 1;" allowfullscreen="true" allow="autoplay *; encrypted-media *; fullscreen *; media-stream *; picture-in-picture *"></iframe>
         <div class="loading-indicator" id="loading-indicator">
             <i class="fas fa-spinner fa-spin"></i> Đang tải luồng...
         </div>
@@ -2689,7 +2689,14 @@
                 if (iframePlayer) {
                     if (video) video.style.display = 'none';
                     iframePlayer.style.display = 'block';
-                    iframePlayer.src = targetPlayUrl;
+                    
+                    let iframeSrc = targetPlayUrl;
+                    if (!iframeSrc.includes('muted=')) {
+                        iframeSrc += (iframeSrc.includes('?') ? '&' : '?') + 'autoplay=1&muted=0&sound=1';
+                    }
+                    iframePlayer.src = iframeSrc;
+                    try { iframePlayer.focus(); } catch (e) {}
+                    
                     loadingIndicator.classList.remove('active');
                     isVideoLoading = false;
                     return;
