@@ -1843,8 +1843,12 @@
                 }
             }
             load(context, config, callbacks) {
-                if (context.url && shouldProxyUrl(context.url)) {
-                    context.url = 'https://corsproxy.io/?' + context.url;
+                if (context.url) {
+                    if ((context.url.includes('fptplay') || context.url.includes('fptplay53')) && !context.url.startsWith('https://ancient-night-828e.nhatp7111.workers.dev/?url=')) {
+                        context.url = 'https://ancient-night-828e.nhatp7111.workers.dev/?url=' + encodeURIComponent(context.url);
+                    } else if (shouldProxyUrl(context.url)) {
+                        context.url = 'https://corsproxy.io/?' + context.url;
+                    }
                 }
                 if (this.loader) {
                     this.loader.load(context, config, callbacks);
@@ -2659,9 +2663,13 @@
             } else {
                 useProxy = localStorage.getItem('cors_proxy') === 'on';
             }
-            const proxiedUrl = (useProxy && shouldProxyUrl(targetPlayUrl))
+            let proxiedUrl = (useProxy && shouldProxyUrl(targetPlayUrl))
                 ? 'https://corsproxy.io/?' + targetPlayUrl 
                 : targetPlayUrl;
+
+            if (targetPlayUrl.includes('fptplay.net') || targetPlayUrl.includes('fptplay53.net')) {
+                proxiedUrl = 'https://ancient-night-828e.nhatp7111.workers.dev/?url=' + encodeURIComponent(targetPlayUrl);
+            }
 
             if (subUrl) {
                 loadSubtitleAsync(subUrl);
@@ -2747,7 +2755,7 @@
                 }
                 else if (Hls.isSupported()) {
                     const currentHlsConfig = { ...TV_HLS_CONFIG };
-                    if (useProxy && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
+                    if ((useProxy || targetPlayUrl.includes('fptplay.net') || targetPlayUrl.includes('fptplay53.net')) && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
                         currentHlsConfig.loader = CorsProxyLoader;
                     }
 
