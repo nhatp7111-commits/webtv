@@ -1312,7 +1312,6 @@
 
     <div class="player-wrapper" id="player-wrapper" title="Nhấn OK để toàn màn hình">
         <video id="main-video" playsinline webkit-playsinline crossorigin="anonymous" referrerpolicy="no-referrer"></video>
-        <iframe id="iframe-player" style="width: 100%; height: 100%; border: none; display: none; background: #000; position: absolute; top: 0; left: 0; z-index: 1;" allowfullscreen="true" allow="autoplay *; encrypted-media *; fullscreen *; media-stream *; picture-in-picture *"></iframe>
         <div class="loading-indicator" id="loading-indicator">
             <i class="fas fa-spinner fa-spin"></i> Đang tải luồng...
         </div>
@@ -1535,8 +1534,8 @@
 <script>
     // Khởi tạo các kênh có sẵn
     const channels = [
-        { name: "VTV1 HD (FPT Direct)", logo: "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/logo/VTV1_150x902_1675159127.webp", url: "https://live-a.fptplay53.net/live/media/vtv1/live247-hls-avc/index.m3u8", category: "Truyền hình" },
-        { name: "VTV1 HD (VTVGo)", logo: "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/logo/VTV1_150x902_1675159127.webp", url: "https://vtvgolive-vtv02.vtvdigital.vn/TW7z-ZT_NvvoWSJJOVchhw/1782750595/hls/vtv/live/vtv1__vtv1080p-h264/index.m3u8", category: "Truyền hình" },
+        { name: "VTV1 HD", logo: "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/logo/VTV1_150x902_1675159127.webp", url: "https://vtvgolive-vtv02.vtvdigital.vn/TW7z-ZT_NvvoWSJJOVchhw/1782750595/hls/vtv/live/vtv1__vtv1080p-h264/index.m3u8", category: "Truyền hình" },
+        { name: "VTV2 HD", logo: "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/logo/VTV2_150x902_1675158864.webp", url: "https://live-a.fptplay53.net/live/media/vtv2/live247-hls-avc/vtv2-avc1_5600000=10000-mp4a_131600=20000.m3u8", category: "Truyền hình" },
         { name: "VTV3 HD", logo: "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/logo/VTV3_150x902_1675158867.webp", url: "https://live-a.fptplay53.net/live/media/vtv3/live247-hls-avc/vtv3-avc1_5600000=10000-mp4a_131600=20000.m3u8", category: "Truyền hình" }
     ];
 
@@ -2370,13 +2369,6 @@
             clearStallCheck();
             video.pause();
             
-            const iframePlayer = document.getElementById('iframe-player');
-            if (iframePlayer) {
-                iframePlayer.style.display = 'none';
-                iframePlayer.src = 'about:blank';
-            }
-            if (video) video.style.display = 'block';
-            
             if (hls) {
                 try {
                     hls.stopLoad();
@@ -2676,30 +2668,11 @@
                 : targetPlayUrl;
 
             if (targetPlayUrl.includes('fptplay') || targetPlayUrl.includes('fptplay53')) {
-                proxiedUrl = 'https://ancient-night-828e.nhatp7111.workers.dev/?url=' + encodeURIComponent(targetPlayUrl);
+                proxiedUrl = '/api/proxy?url=' + encodeURIComponent(targetPlayUrl);
             }
 
             if (subUrl) {
                 loadSubtitleAsync(subUrl);
-            }
-
-            if (targetPlayUrl.includes('blogspot.com') || targetPlayUrl.includes('/embed/') || (targetPlayUrl.includes('html') && !targetPlayUrl.includes('.m3u8'))) {
-                const iframePlayer = document.getElementById('iframe-player');
-                if (iframePlayer) {
-                    if (video) video.style.display = 'none';
-                    iframePlayer.style.display = 'block';
-                    
-                    let iframeSrc = targetPlayUrl;
-                    if (!iframeSrc.includes('muted=')) {
-                        iframeSrc += (iframeSrc.includes('?') ? '&' : '?') + 'autoplay=1&muted=0&sound=1';
-                    }
-                    iframePlayer.src = iframeSrc;
-                    try { iframePlayer.focus(); } catch (e) {}
-                    
-                    loadingIndicator.classList.remove('active');
-                    isVideoLoading = false;
-                    return;
-                }
             }
 
             try {
